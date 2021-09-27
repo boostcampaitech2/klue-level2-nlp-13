@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from torch.utils.data import DataLoader
 from load_data import *
 import pandas as pd
@@ -23,8 +23,7 @@ def inference(model, tokenized_sent, device):
     with torch.no_grad():
       outputs = model(
           input_ids=data['input_ids'].to(device),
-          attention_mask=data['attention_mask'].to(device),
-          token_type_ids=data['token_type_ids'].to(device)
+          attention_mask=data['attention_mask'].to(device)
           )
     logits = outputs[0]
     prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
@@ -59,23 +58,23 @@ def load_test_dataset(dataset_dir, tokenizer):
   tokenized_test = tokenized_dataset(test_dataset, tokenizer)
   return test_dataset['id'], tokenized_test, test_label
 
-def main(args):
+def do_inference(config):
   """
     주어진 dataset csv 파일과 같은 형태일 경우 inference 가능한 코드입니다.
   """
   device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
   # load tokenizer
-  Tokenizer_NAME = "klue/bert-base"
+  Tokenizer_NAME = config.model_name
   tokenizer = AutoTokenizer.from_pretrained(Tokenizer_NAME)
 
   ## load my model
-  MODEL_NAME = args.model_dir # model dir.
-  model = AutoModelForSequenceClassification.from_pretrained(args.model_dir)
+  MODEL_NAME = config.model_save_path # model dir.
+  model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
   model.parameters
   model.to(device)
 
   ## load test datset
-  test_dataset_dir = "../dataset/test/test_data.csv"
+  test_dataset_dir = "../../dataset/test/test_data.csv"
   test_id, test_dataset, test_label = load_test_dataset(test_dataset_dir, tokenizer)
   Re_test_dataset = RE_Dataset(test_dataset ,test_label)
 
@@ -88,15 +87,17 @@ def main(args):
   # 아래 directory와 columns의 형태는 지켜주시기 바랍니다.
   output = pd.DataFrame({'id':test_id,'pred_label':pred_answer,'probs':output_prob,})
 
-  output.to_csv('./prediction/submission.csv', index=False) # 최종적으로 완성된 예측한 라벨 csv 파일 형태로 저장.
+  submission_file_name = config.submission_file_name
+  output.to_csv('./prediction/' + submission_file_name, index=False) # 최종적으로 완성된 예측한 라벨 csv 파일 형태로 저장.
   #### 필수!! ##############################################
   print('---- Finish! ----')
-if __name__ == '__main__':
-  parser = argparse.ArgumentParser()
+
+# if __name__ == '__main__':
+#   parser = argparse.ArgumentParser()
   
-  # model dir
-  parser.add_argument('--model_dir', type=str, default="./best_model")
-  args = parser.parse_args()
-  print(args)
-  main(args)
+#   # model dir
+#   parser.add_argument('--model_dir', type=str, default="./best_model")
+#   args = parser.parse_args()
+#   print(args)
+#   main(args)
   

@@ -1,12 +1,12 @@
 from transformers import Trainer, TrainingArguments
 from utills import * 
+from loss import MyTrainer
 
-def train(config, model, train_dataset): 
+def train(config, model, train_dataset, valid_dataset): 
   # 사용한 option 외에도 다양한 option들이 있습니다.
   # https://huggingface.co/transformers/main_classes/trainer.html#trainingarguments 참고해주세요.
   training_args = TrainingArguments(
     report_to="wandb",                              # enable logging to W&B
-    run_name="bert-base-test",                   # Run name
     output_dir=config.output_dir,                   # output directory
     save_total_limit=config.save_total_limit,       # number of total save model.
     save_steps=config.save_steps,                   # model saving step.
@@ -26,14 +26,16 @@ def train(config, model, train_dataset):
     load_best_model_at_end = True 
   )
 
-  trainer = Trainer(
+  # Custom Loss 사용을 위해 Trainner 정의 (loss.py)
+  trainer = MyTrainer(
+    config = config,
     model=model,                         # the instantiated 🤗 Transformers model to be trained
     args=training_args,                  # training arguments, defined above
     train_dataset=train_dataset,         # training dataset
-    eval_dataset=train_dataset,             # evaluation dataset
-    compute_metrics=compute_metrics         # define metrics function
+    eval_dataset=valid_dataset,          # evaluation dataset
+    compute_metrics=compute_metrics      # define metrics function
   )
 
   # train model
   trainer.train()
-  model.save_pretrained('./best_model/best.pt')
+  model.save_pretrained(config.model_save_path)

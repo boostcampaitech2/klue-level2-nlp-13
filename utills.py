@@ -39,6 +39,7 @@ def read_config(paths):
     config.weight_decay = float(values['Training']['weight_decay'])
     config.early_stopping = int(values['Training']['early_stopping'])
     config.k_fold_num = int(values['Training']['k_fold_num'])
+    config.random_state = int(values['Training']['random_state'])
 
     # For Recording
     config.logging_steps = int(values['Recording']['logging_steps'])
@@ -46,6 +47,9 @@ def read_config(paths):
     config.save_steps = int(values['Recording']['save_steps'])
     config.evaluation_strategy = values['Recording']['evaluation_strategy']
     config.eval_steps = int(values['Recording']['eval_steps'])
+
+    # For WandB
+    config.run_name = values['WandB']['run_name']
 
     return config
 
@@ -104,3 +108,12 @@ def compute_metrics(pred):
       'auprc' : auprc,
       'accuracy': acc,
   }
+
+def get_class_weights(train_label):
+  _ , class_num = np.unique(train_label, return_counts = True)
+  print("Class number: ", _)
+  print("Class Balance: ", class_num)
+  
+  base_class = np.max(class_num)
+  class_weight = (base_class / np.array(class_num))
+  return class_weight

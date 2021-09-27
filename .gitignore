@@ -7,3 +7,5 @@ __pycache__/
 logs/
 .ipynb_chekpoints
 results/
+best_model/
+prediction/

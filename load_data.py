@@ -1,5 +1,6 @@
 import pandas as pd
 import torch
+from sklearn.model_selection import train_test_split
 
 class RE_Dataset(torch.utils.data.Dataset):
   """ Dataset 구성을 위한 class."""
@@ -32,7 +33,7 @@ def load_data(dataset_dir):
   """ csv 파일을 경로에 맡게 불러 옵니다. """
   pd_dataset = pd.read_csv(dataset_dir)
   dataset = preprocessing_dataset(pd_dataset)
-  
+
   return dataset
 
 def tokenized_dataset(dataset, tokenizer):
@@ -50,5 +51,7 @@ def tokenized_dataset(dataset, tokenizer):
       truncation=True,
       max_length=256,
       add_special_tokens=True,
+      return_token_type_ids=False, # 문장 id
       )
   return tokenized_sentences
+
