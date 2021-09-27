@@ -1,8 +1,5 @@
-import pickle as pickle
-import os
 import pandas as pd
 import torch
-
 
 class RE_Dataset(torch.utils.data.Dataset):
   """ Dataset 구성을 위한 class."""
