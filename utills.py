@@ -57,7 +57,9 @@ def read_config(paths):
 
     # For WandB
     config.run_name = values['WandB']['run_name']
-
+    config.project = values['WandB']['project']
+    config.entity = values['WandB']['entity']
+    
     return config
 
 def label_to_num(config, label):

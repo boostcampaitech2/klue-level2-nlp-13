@@ -30,7 +30,10 @@ class CrossEntropy_FoscalLoss(nn.Module):
         self.class_weights = class_weights
     
     def forward(self, inputs, targets):
-        ce_loss = nn.CrossEntropyLoss(weight=torch.tensor(self.class_weights).to(self.device, dtype=torch.float))(inputs, targets)
+        if self.class_weights:
+            ce_loss = nn.CrossEntropyLoss(weight=torch.tensor(self.class_weights).to(self.device, dtype=torch.float))(inputs, targets)
+        else:
+            ce_loss = nn.CrossEntropyLoss()(inputs, targets)
         fs_loss = FocalLoss()(inputs, targets)
         return ce_loss * self.weight1 + fs_loss * self.weight2
 
@@ -95,6 +98,8 @@ class MyTrainer(Trainer):
             custom_loss = torch.nn.CrossEntropyLoss()
         elif self.config.loss_name == 'Crossentropy_weighted_foscal':
             custom_loss = CrossEntropy_FoscalLoss(self.config.class_weight, self.config)
+        elif self.config.loss_name == 'Crossentropy_foscal':
+            custom_loss = CrossEntropy_FoscalLoss(None, self.config)
         elif self.config.loss_name == 'CrossEntropy_weighted':
             custom_loss = torch.nn.CrossEntropyLoss(weight=torch.tensor(self.config.class_weight).to(self.config.device, dtype=torch.float))
         elif self.config.loss_name == 'Focal':

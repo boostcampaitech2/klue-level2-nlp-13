@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     # 6. Train
     print('='*10, "Start train...", '='*10)
-    wandb.init(project='LKH', entity='clue', name=config.run_name)
+    wandb.init(project=config.project, entity=config.entity, name=config.run_name, config=config)
     train(config, model, RE_train_dataset, RE_valid_dataset)
     print('='*10, "END", '='*10)
 

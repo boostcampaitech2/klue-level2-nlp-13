@@ -58,8 +58,8 @@ def tokenized_dataset(config, dataset, tokenizer):
   if config.add_special_token:
     for idx, (e01_idx, e02_idx) in enumerate(zip(dataset['subject_entity_idx'], dataset['object_entity_idx'])):
       temp_sentence = dataset['sentence'].iloc[idx]
-      temp_sentence = (temp_sentence[:e01_idx[0]] + '[e1]' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + '[/e1]' 
-      + temp_sentence[e01_idx[1]+1:e02_idx[0]] + '[e2]' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + '[/e2]' + temp_sentence[e02_idx[1]+1:])
+      temp_sentence = (temp_sentence[:e01_idx[0]] + '[E1]' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + '[/E1]' 
+      + temp_sentence[e01_idx[1]+1:e02_idx[0]] + '[E2]' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + '[/E2]' + temp_sentence[e02_idx[1]+1:])
       dataset['sentence'].iloc[idx] = temp_sentence
     tokenized_sentences = tokenizer(
         list(dataset['sentence']),
