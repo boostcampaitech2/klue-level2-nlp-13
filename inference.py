@@ -1,13 +1,14 @@
+import sys, getopt
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from torch.utils.data import DataLoader
 from load_data import *
+from utills import *
 import pandas as pd
 import torch
 import torch.nn.functional as F
 
 import pickle as pickle
 import numpy as np
-import argparse
 from tqdm import tqdm
 
 def inference(model, tokenized_sent, device):
@@ -47,15 +48,16 @@ def num_to_label(label):
   
   return origin_label
 
-def load_test_dataset(dataset_dir, tokenizer):
+def load_test_dataset(config, dataset_dir, tokenizer):
   """
     test dataset을 불러온 후,
     tokenizing 합니다.
   """
   test_dataset = load_data(dataset_dir)
   test_label = list(map(int,test_dataset['label'].values))
+  
   # tokenizing dataset
-  tokenized_test = tokenized_dataset(test_dataset, tokenizer)
+  tokenized_test = tokenized_dataset(config, test_dataset, tokenizer)
   return test_dataset['id'], tokenized_test, test_label
 
 def do_inference(config):
@@ -66,16 +68,23 @@ def do_inference(config):
   # load tokenizer
   Tokenizer_NAME = config.model_name
   tokenizer = AutoTokenizer.from_pretrained(Tokenizer_NAME)
+  if config.add_special_token:
+    print("Add special token")
+    # 추가 하고 싶은 Special token dict 정의
+    special_tokens_dict = {'additional_special_tokens': config.new_special_token_list}
+    # tokenizer에 더해주기
+    tokenizer.add_special_tokens(special_tokens_dict)
 
   ## load my model
   MODEL_NAME = config.model_save_path # model dir.
   model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
-  model.parameters
+  if config.add_special_token:
+    model.resize_token_embeddings(len(tokenizer))
   model.to(device)
 
   ## load test datset
   test_dataset_dir = config.test_data_path
-  test_id, test_dataset, test_label = load_test_dataset(test_dataset_dir, tokenizer)
+  test_id, test_dataset, test_label = load_test_dataset(config, test_dataset_dir, tokenizer)
   Re_test_dataset = RE_Dataset(test_dataset ,test_label)
 
   ## predict answer
@@ -87,17 +96,39 @@ def do_inference(config):
   # 아래 directory와 columns의 형태는 지켜주시기 바랍니다.
   output = pd.DataFrame({'id':test_id,'pred_label':pred_answer,'probs':output_prob,})
 
+  print()
   submission_file_name = config.submission_file_name
   output.to_csv('./prediction/' + submission_file_name, index=False) # 최종적으로 완성된 예측한 라벨 csv 파일 형태로 저장.
   #### 필수!! ##############################################
   print('---- Finish! ----')
 
 # if __name__ == '__main__':
-#   parser = argparse.ArgumentParser()
+#   argv = sys.argv
+#   file_name = argv[0] # 실행시키는 파일명
+#   config_path = ""   # config file 경로
   
-#   # model dir
-#   parser.add_argument('--model_dir', type=str, default="./best_model")
-#   args = parser.parse_args()
-#   print(args)
-#   main(args)
+#   try:
+#       # 파일명 이후 부터 입력 받는 옵션
+#       # help, config_path
+#       opts, etc_args = getopt.getopt(argv[1:], "hc:", ["help", "config_path="])
+#   except getopt.GetoptError:
+#       # 잘못된 옵션을 입력하는 경우
+#       print(file_name, "-c <config_path>")
+#       sys.exit(2)
+      
+#   # 입력된 옵션을 적절히 변수로 입력
+#   for opt, arg in opts:
+#       if opt in ("-h", "--help"):
+#           print(file_name, "-c <config_path>")
+#           sys.exit(0)
+#       elif opt in ("-c", "--config_path"):
+#           config_path = arg
   
+#   # 입력이 필수적인 옵션 입력이 없으면 오류 메시지 출력
+#   if len(config_path) < 1:
+#       print(file_name, "-c <config_path> is madatory")
+#       sys.exit(2)
+
+# config = read_config(config_path)
+# do_inference(config)
+

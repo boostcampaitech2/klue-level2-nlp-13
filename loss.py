@@ -93,7 +93,7 @@ class MyTrainer(Trainer):
         # config에 저장된 loss_name에 따라 다른 loss 계산
         if self.config.loss_name == 'CrossEntropy':
             custom_loss = torch.nn.CrossEntropyLoss()
-        elif self.config.loss_name == 'Crossentropy_foscal':
+        elif self.config.loss_name == 'Crossentropy_weighted_foscal':
             custom_loss = CrossEntropy_FoscalLoss(self.config.class_weight, self.config)
         elif self.config.loss_name == 'CrossEntropy_weighted':
             custom_loss = torch.nn.CrossEntropyLoss(weight=torch.tensor(self.config.class_weight).to(self.config.device, dtype=torch.float))

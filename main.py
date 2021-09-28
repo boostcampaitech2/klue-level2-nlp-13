@@ -61,8 +61,14 @@ if __name__ == "__main__":
         # 토크나이저 불러오기 (tokenizer.py)
     tokenizer = get_tokenizer(config.tokenizer_name)
         # 훈련/검증 각각 tokenizer 적용
-    tokenized_train = tokenized_dataset(train_dataset, tokenizer)
-    tokenized_valid = tokenized_dataset(valid_dataset, tokenizer)
+    if config.add_special_token:
+        print("Add special token")
+        # 추가 하고 싶은 Special token dict 정의
+        special_tokens_dict = {'additional_special_tokens': config.new_special_token_list}
+        # tokenizer에 더해주기
+        num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+    tokenized_train = tokenized_dataset(config, train_dataset, tokenizer)
+    tokenized_valid = tokenized_dataset(config, valid_dataset, tokenizer)
     print('='*10, "END", '='*10)
 
     # 4. Make pytorch dataset
@@ -77,6 +83,9 @@ if __name__ == "__main__":
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         # 모델 불러오기 (models.py)
     model = get_model(config.model_name, config.num_classes).to(config.device)
+    # 모델도 늘려줘야함!
+    if config.add_special_token:
+        model.resize_token_embeddings(len(tokenizer))
     print('='*10, "END", '='*10)
 
     # 6. Train

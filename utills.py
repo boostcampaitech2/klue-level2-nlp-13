@@ -2,6 +2,7 @@ import configparser
 import wandb
 import numpy as np
 import pickle as pickle
+import ast
 
 import sklearn
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
@@ -21,6 +22,7 @@ def read_config(paths):
     config.num_to_label = values['Path']['num_to_label']
     config.output_dir = values['Path']['output_dir']
     config.logging_dir = values['Path']['logging_dir']
+    config.submission_file_name = values['Path']['submission_file_name']
 
     # For Model
     config.model_name = values['Model']['model_name']
@@ -28,6 +30,8 @@ def read_config(paths):
     config.optimizer_name = values['Model']['optimizer_name']
     config.scheduler_name = values['Model']['scheduler_name']
     config.num_classes = int(values['Model']['num_classes'])
+    config.add_special_token = values['Model'].getboolean('add_special_token', 'b')
+    config.new_special_token_list = ast.literal_eval(values.get("Model", "new_special_token_list"))
 
     # For Loss
     config.loss_name = values['Loss']['loss_name']
