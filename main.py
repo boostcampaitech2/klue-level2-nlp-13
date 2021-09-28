@@ -47,13 +47,13 @@ if __name__ == "__main__":
     dataset = load_data(config.data_path)
         # class imbalanced 보완을 위한 loss 사용시, 가중치 계산 (utills.py)
     if 'weighted' in  config.loss_name:
-        label = label_to_num(dataset['label'].values)
+        label = label_to_num(config, dataset['label'].values)
         config.class_weight = get_class_weights(label)
         # 데이터 라벨의 비율 맞게 훈련/검증 데이터 분리
     train_dataset, valid_dataset = train_test_split(dataset, test_size=0.2, stratify=dataset['label'], random_state=config.random_state)
         # 라벨-index 맵핑
-    train_label = label_to_num(train_dataset['label'].values)
-    valid_label = label_to_num(valid_dataset['label'].values)
+    train_label = label_to_num(config, train_dataset['label'].values)
+    valid_label = label_to_num(config, valid_dataset['label'].values)
     print('='*10, "END", '='*10)
 
     # 3. Tokenizing

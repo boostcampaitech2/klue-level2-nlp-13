@@ -16,6 +16,9 @@ def read_config(paths):
     # For Path
     config.data_path = values['Path']['data_path']
     config.model_save_path = values['Path']['model_save_path']
+    config.test_data_path = values['Path']['test_data_path']
+    config.label_to_num = values['Path']['label_to_num']
+    config.num_to_label = values['Path']['num_to_label']
     config.output_dir = values['Path']['output_dir']
     config.logging_dir = values['Path']['logging_dir']
 
@@ -53,9 +56,9 @@ def read_config(paths):
 
     return config
 
-def label_to_num(label):
+def label_to_num(config, label):
   num_label = []
-  with open('dict_label_to_num.pkl', 'rb') as f:
+  with open(config.label_to_num, 'rb') as f:
     dict_label_to_num = pickle.load(f)
   for v in label:
     num_label.append(dict_label_to_num[v])

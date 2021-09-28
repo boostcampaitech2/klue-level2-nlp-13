@@ -74,7 +74,7 @@ def do_inference(config):
   model.to(device)
 
   ## load test datset
-  test_dataset_dir = "../../dataset/test/test_data.csv"
+  test_dataset_dir = config.test_data_path
   test_id, test_dataset, test_label = load_test_dataset(test_dataset_dir, tokenizer)
   Re_test_dataset = RE_Dataset(test_dataset ,test_label)
 
