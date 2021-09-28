@@ -1,12 +1,19 @@
+from optimizer import get_optimizer
 from transformers import Trainer, TrainingArguments
+from transformers.utils.dummy_pt_objects import get_scheduler
 from utills import * 
 from loss import MyTrainer
+import torch
 
 def train(config, model, train_dataset, valid_dataset): 
+  optimizer = get_optimizer(model, config)
+  scheduler = get_scheduler(optimizer, config)
+  optimizers = (optimizer, scheduler)
+  
+
   # 사용한 option 외에도 다양한 option들이 있습니다.
   # https://huggingface.co/transformers/main_classes/trainer.html#trainingarguments 참고해주세요.
-  training_args = TrainingArguments(
-    report_to="wandb",                              # enable logging to W&B
+  training_args = TrainingArguments(                          # enable logging to W&B
     output_dir=config.output_dir,                   # output directory
     save_total_limit=config.save_total_limit,       # number of total save model.
     save_steps=config.save_steps,                   # model saving step.
@@ -28,11 +35,12 @@ def train(config, model, train_dataset, valid_dataset):
 
   # Custom Loss 사용을 위해 Trainner 정의 (loss.py)
   trainer = MyTrainer(
-    config = config,
+    config=config,
     model=model,                         # the instantiated 🤗 Transformers model to be trained
     args=training_args,                  # training arguments, defined above
     train_dataset=train_dataset,         # training dataset
     eval_dataset=valid_dataset,          # evaluation dataset
+    optimizers=optimizers,
     compute_metrics=compute_metrics      # define metrics function
   )
 

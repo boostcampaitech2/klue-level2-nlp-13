@@ -96,4 +96,4 @@ if __name__ == "__main__":
 
     # 7. Inference
     print('='*10, "Start inference...", '='*10)
-    do_inference(config) # 오류 있을 수 있음! 아직 여기까지 실행된 적이 없음!
+    do_inference(config)
