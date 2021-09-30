@@ -92,30 +92,6 @@ class MyTrainer(Trainer):
         super().__init__(*args, **kwargs)
         self.config = config
 
-    # def compute_loss(self, model, inputs, return_outputs=False):
-    #     """
-    #     How the loss is computed by Trainer. By default, all models return the loss in the first element.
-
-    #     Subclass and override for custom behavior.
-    #     """
-    #     if self.label_smoother is not None and "labels" in inputs:
-    #         labels = inputs.pop("labels")
-    #     else:
-    #         labels = None
-    #     outputs = model(**inputs)
-    #     # Save past state if it exists
-    #     # TODO: this needs to be fixed and made cleaner later.
-    #     if self.args.past_index >= 0:
-    #         self._past = outputs[self.args.past_index]
-
-    #     if labels is not None:
-    #         loss = self.label_smoother(outputs, labels)
-    #     else:
-    #         # We don't use .loss here since the model may return tuples instead of ModelOutput.
-    #         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-
-    #     return (loss, outputs) if return_outputs else loss
-
     def compute_loss(self, model, inputs, return_outputs=False):
         # config에 저장된 loss_name에 따라 다른 loss 계산
         if self.config.loss_name == 'CrossEntropy':
@@ -135,7 +111,7 @@ class MyTrainer(Trainer):
             labels = inputs.pop("labels")
         else:
             labels = None
-            
+
         outputs = model(**inputs)
 
         if labels is not None:
@@ -143,7 +119,4 @@ class MyTrainer(Trainer):
         else:
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-
-        # logits = outputs[0]
-        # loss = custom_loss(logits, labels)
         return (loss, outputs) if return_outputs else loss
