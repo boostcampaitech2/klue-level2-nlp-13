@@ -6,7 +6,7 @@ from load_data import *
 from models import *
 from mytokenizers import *
 from train import *
-from utills import *
+from utils import *
 
 from sklearn.model_selection import train_test_split
 
@@ -42,6 +42,8 @@ if __name__ == "__main__":
     config = read_config(config_path)
     print('='*10, "END", '='*10)
     
+    seed_everything(config.seed)
+
     # 2. Load data
     print('='*10, "Data loading...", '='*10)
     dataset = load_data(config.data_path)
