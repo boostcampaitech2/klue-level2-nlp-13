@@ -45,9 +45,15 @@ def preprocessing_dataset(dataset):
 
   return out_dataset
 
-def load_data(dataset_dir):
+def load_data(dataset_dir, config):
   """ csv 파일을 경로에 맡게 불러 옵니다. """
   pd_dataset = pd.read_csv(dataset_dir)
+
+  if config.prediction_mode == 'binary':
+    pd_dataset.loc[pd_dataset.label != 'no_relation', 'label'] = 'org:top_members/employees'
+  elif config.prediction_mode == 'multi':
+    pd_dataset = pd_dataset.loc[pd_dataset.label != 'no_relation']
+
   dataset = preprocessing_dataset(pd_dataset)
 
   return dataset

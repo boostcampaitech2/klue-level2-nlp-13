@@ -44,7 +44,7 @@ if __name__ == "__main__":
     
     # 2. Load data
     print('='*10, "Data loading...", '='*10)
-    dataset = load_data(config.data_path)
+    dataset = load_data(config.data_path, config)
         # class imbalanced 보완을 위한 loss 사용시, 가중치 계산 (utills.py)
     if 'weighted' in  config.loss_name:
         label = label_to_num(config, dataset['label'].values)
@@ -95,5 +95,6 @@ if __name__ == "__main__":
     print('='*10, "END", '='*10)
 
     # 7. Inference
-    print('='*10, "Start inference...", '='*10)
-    do_inference(config)
+    if config.prediction_mode not in ['binary', 'multi']:
+        print('='*10, "Start inference...", '='*10)
+        do_inference(config)

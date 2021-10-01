@@ -53,7 +53,8 @@ def load_test_dataset(config, dataset_dir, tokenizer):
     test dataset을 불러온 후,
     tokenizing 합니다.
   """
-  test_dataset = load_data(dataset_dir)
+  config.prediction_mode = 'test'
+  test_dataset = load_data(dataset_dir, config)
   test_label = list(map(int,test_dataset['label'].values))
   
   # tokenizing dataset

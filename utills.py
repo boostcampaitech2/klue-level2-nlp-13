@@ -32,6 +32,7 @@ def read_config(paths):
     config.num_classes = int(values['Model']['num_classes'])
     config.add_special_token = values['Model'].getboolean('add_special_token', 'b')
     config.new_special_token_list = ast.literal_eval(values.get("Model", "new_special_token_list"))
+    config.prediction_mode = values['Model']['prediction_mode']
 
     # For Loss
     config.loss_name = values['Loss']['loss_name']
@@ -60,6 +61,10 @@ def read_config(paths):
     config.project = values['WandB']['project']
     config.entity = values['WandB']['entity']
     
+    # For Inference
+    config.binary_model_path = values['Inference']['binary_model_path']
+    config.multi_model_path = values['Inference']['multi_model_path']
+
     return config
 
 def label_to_num(config, label):
@@ -67,7 +72,10 @@ def label_to_num(config, label):
   with open(config.label_to_num, 'rb') as f:
     dict_label_to_num = pickle.load(f)
   for v in label:
-    num_label.append(dict_label_to_num[v])
+    if config.prediction_mode == 'multi':
+      num_label.append(dict_label_to_num[v] - 1)
+    else:
+      num_label.append(dict_label_to_num[v])
   
   return num_label
 
@@ -91,10 +99,11 @@ def klue_re_micro_f1(preds, labels):
 
 def klue_re_auprc(probs, labels):
     """KLUE-RE AUPRC (with no_relation)"""
-    labels = np.eye(30)[labels]
+    num_class = len(np.unique(labels))
+    labels = np.eye(num_class)[labels]
 
-    score = np.zeros((30,))
-    for c in range(30):
+    score = np.zeros((num_class,))
+    for c in range(num_class):
         targets_c = labels.take([c], axis=1).ravel()
         preds_c = probs.take([c], axis=1).ravel()
         precision, recall, _ = sklearn.metrics.precision_recall_curve(targets_c, preds_c)

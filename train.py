@@ -30,6 +30,7 @@ def train(config, model, train_dataset, valid_dataset):
                                                     # `steps`: Evaluate every `eval_steps`.
                                                     # `epoch`: Evaluate every end of epoch.
     eval_steps = config.eval_steps,                 # evaluation step.
+    metric_for_best_model = 'eval_micro f1 score',
     load_best_model_at_end = True 
   )
 
@@ -46,4 +47,4 @@ def train(config, model, train_dataset, valid_dataset):
 
   # train model
   trainer.train()
-  model.save_pretrained(config.model_save_path)
+  #model.save_pretrained(config.model_save_path)
