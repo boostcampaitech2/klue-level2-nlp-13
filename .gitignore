@@ -1,0 +1,9 @@
+wandb/
+configs/
+*.log
+*.out
+nohup.out
+__pycache__/
+logs/
+.ipynb_chekpoints
+results/
