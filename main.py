@@ -10,6 +10,15 @@ from utils import *
 
 from sklearn.model_selection import train_test_split
 
+# huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# RuntimeError: CUDA out of memory.
+import gc
+gc.collect()
+torch.cuda.empty_cache()
+
 if __name__ == "__main__":
     argv = sys.argv
     file_name = argv[0] # 실행시키는 파일명
@@ -96,10 +105,11 @@ if __name__ == "__main__":
     train(config, model, RE_train_dataset, RE_valid_dataset)
     print('='*10, "END", '='*10)
 
-    # 7. Inference
+    # 7. Inference                                               
     print('='*10, "Start inference...", '='*10)
     do_inference(config)
 
 
 
-    
+# 컴퓨터의 휴식을 위한 선택..
+# nohup sh -c 'python main.py -c ./configs/sample.ini 1> /dev/null 2>&1' &
