@@ -55,3 +55,21 @@ def tokenized_dataset(dataset, tokenizer):
       add_special_tokens=True,
       )
   return tokenized_sentences
+
+
+import json
+import pandas as pd
+from collections import defaultdict
+
+train_json_path = "/opt/ml/KLUE-Baseline/data/klue_benchmark/klue-re-v1.1/klue-re-v1.1_train.json"
+dev_json_path = "/opt/ml/KLUE-Baseline/data/klue_benchmark/klue-re-v1.1/klue-re-v1.1_dev.json"
+
+def json_to_df(json_path):
+    with open(json_path) as f:
+        json_object = json.load(f)
+    data = defaultdict(list)
+    for dict in json_object:
+        for key, value in dict.items():
+            data[key].append(value) 
+    df = pd.DataFrame(data)
+    return df
