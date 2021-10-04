@@ -23,6 +23,7 @@ def read_config(paths):
     config.output_dir = values['Path']['output_dir']
     config.logging_dir = values['Path']['logging_dir']
     config.submission_file_name = values['Path']['submission_file_name']
+    config.augmentation_data_path = values['Path']['augmentation_data_path']
 
     # For Model
     config.model_name = values['Model']['model_name']
@@ -48,6 +49,7 @@ def read_config(paths):
     config.early_stopping = int(values['Training']['early_stopping'])
     config.k_fold_num = int(values['Training']['k_fold_num'])
     config.random_state = int(values['Training']['random_state'])
+    config.use_aug_data = values['Training'].getboolean('use_aug_data', 'b')
 
     # For Recording
     config.logging_steps = int(values['Recording']['logging_steps'])
@@ -78,6 +80,18 @@ def label_to_num(config, label):
       num_label.append(dict_label_to_num[v])
   
   return num_label
+
+def num_to_label(label):
+  """
+    숫자로 되어 있던 class를 원본 문자열 라벨로 변환 합니다.
+  """
+  origin_label = []
+  with open('dict_num_to_label.pkl', 'rb') as f:
+    dict_num_to_label = pickle.load(f)
+  for v in label:
+    origin_label.append(dict_num_to_label[v])
+  
+  return origin_label
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -135,3 +149,25 @@ def get_class_weights(train_label):
   base_class = np.max(class_num)
   class_weight = (base_class / np.array(class_num))
   return class_weight
+
+# wandb에 학습 결과 기록
+def logging_with_wandb(epoch, train_loss, train_f1_score, train_auprc, valid_loss, valid_f1_score, valid_auprc):
+  wandb.log({
+    f"epoch": epoch,
+    f"train_loss": train_loss,
+    f"train_f1": train_f1_score,
+    f"train_auprc": train_auprc,
+    f"valid_loss": valid_loss,
+    f"valid_f1": valid_f1_score,
+    f"valid_auprc": valid_auprc,
+    })
+
+def logging_with_console(epoch, train_loss, train_f1_score, train_auprc, valid_loss, valid_f1_score, valid_auprc):
+  print(f"epoch: {epoch} | "
+        f"train_loss:{train_loss:.5f} | "
+        f"train_f1:{train_f1_score:.2f} |"
+        f"train_auprc:{train_auprc:.2f} | "
+        f"valid_loss:{valid_loss:.5f} | "
+        f"valid_f1:{valid_f1_score:.2f} | "
+        f"valid_auprc:{valid_auprc:.2f}"
+  )

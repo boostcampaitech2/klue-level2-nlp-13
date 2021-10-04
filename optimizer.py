@@ -1,8 +1,9 @@
 import torch
+from transformers import AdamW
 
 def get_optimizer(model, config):
     if config.optimizer_name == 'AdamW':
-        optimizer = torch.optim.AdamW(model.parameters(), lr = config.learning_rate)
+        optimizer = AdamW(model.parameters(), lr = config.learning_rate)
     elif config.optimizer_name == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr = config.learning_rate)
 

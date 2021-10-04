@@ -1,4 +1,4 @@
-from inference import do_inference
+#from inference import do_inference
 import wandb
 import sys, getopt
 
@@ -6,6 +6,7 @@ from load_data import *
 from models import *
 from mytokenizers import *
 from train import *
+from custom_train import *
 from utills import *
 
 from sklearn.model_selection import train_test_split
@@ -45,12 +46,26 @@ if __name__ == "__main__":
     # 2. Load data
     print('='*10, "Data loading...", '='*10)
     dataset = load_data(config.data_path, config)
+
         # class imbalanced 보완을 위한 loss 사용시, 가중치 계산 (utills.py)
     if 'weighted' in  config.loss_name:
         label = label_to_num(config, dataset['label'].values)
         config.class_weight = get_class_weights(label)
         # 데이터 라벨의 비율 맞게 훈련/검증 데이터 분리
-    train_dataset, valid_dataset = train_test_split(dataset, test_size=0.2, stratify=dataset['label'], random_state=config.random_state)
+    train_dataset, valid_dataset = train_test_split(dataset, test_size=0.2, stratify=dataset['label'], shuffle=True, random_state=config.random_state)
+    ####################################################### temp 시도
+    no_rel_dataset = train_dataset.loc[train_dataset['label']=='no_relation']
+    train_dataset = train_dataset.loc[train_dataset['label']!='no_relation']
+    train_dataset = pd.concat([train_dataset, no_rel_dataset.iloc[:3000]], axis=0)
+    ######################################################
+    print('loded:\t', train_dataset.shape)
+
+        # 추가된 데이터를 사용 한다면
+    if config.use_aug_data:
+        aug_dataset = load_data(config.data_path, config)
+        aug_dataset = aug_dataset.loc[~aug_dataset['id'].isin(valid_dataset['id'])]
+        train_dataset = pd.concat([train_dataset, aug_dataset], axis=0)
+        print('changed:\t', train_dataset.shape)
         # 라벨-index 맵핑
     train_label = label_to_num(config, train_dataset['label'].values)
     valid_label = label_to_num(config, valid_dataset['label'].values)
@@ -84,17 +99,18 @@ if __name__ == "__main__":
         # 모델 불러오기 (models.py)
     model = get_model(config.model_name, config.num_classes).to(config.device)
     # 모델도 늘려줘야함!
-    if config.add_special_token:
-        model.resize_token_embeddings(len(tokenizer))
+    #if config.add_special_token:
+    model.resize_token_embeddings(len(tokenizer))
     print('='*10, "END", '='*10)
 
     # 6. Train
     print('='*10, "Start train...", '='*10)
     wandb.init(project=config.project, entity=config.entity, name=config.run_name, config=config)
-    train(config, model, RE_train_dataset, RE_valid_dataset)
+    #train(config, model, RE_train_dataset, RE_valid_dataset)
+    custom_train(config, model, RE_train_dataset, RE_valid_dataset, tokenizer)
     print('='*10, "END", '='*10)
 
     # 7. Inference
-    if config.prediction_mode not in ['binary', 'multi']:
-        print('='*10, "Start inference...", '='*10)
-        do_inference(config)
+    # if config.prediction_mode not in ['binary', 'multi']:
+    #     print('='*10, "Start inference...", '='*10)
+    #     do_inference(config)

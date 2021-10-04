@@ -89,7 +89,7 @@ def tokenized_dataset(config, dataset, tokenizer):
         truncation=True,
         max_length=256,
         add_special_tokens=True,
-        #return_token_type_ids=False, # 문장 id
+        return_token_type_ids=False, # 문장 id
         )
   return tokenized_sentences
 
