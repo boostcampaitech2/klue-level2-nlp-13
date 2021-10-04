@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import pickle as pickle
 import numpy as np
 import argparse
+import os
 from tqdm import tqdm
 
 def inference(model, tokenized_sent, device):
@@ -87,7 +88,7 @@ def do_inference(config):
     tokenizer.add_special_tokens(special_tokens_dict)
 
   ## load my model
-  MODEL_NAME = config.model_save_path # model dir.
+  MODEL_NAME = os.path.join(config.model_save_path, config.run_path) # model dir.
   model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
   if config.add_special_token:
     model.resize_token_embeddings(len(tokenizer))

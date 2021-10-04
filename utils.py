@@ -1,3 +1,4 @@
+import os
 import configparser
 import wandb
 import numpy as np
@@ -17,6 +18,7 @@ def read_config(paths):
     values.read(paths, encoding='utf-8')
 
     # For Path
+    config.run_path = values['Path']['run_path']
     config.data_path = values['Path']['data_path']
     config.model_save_path = values['Path']['model_save_path']
     config.test_data_path = values['Path']['test_data_path']
@@ -33,7 +35,8 @@ def read_config(paths):
     config.scheduler_name = values['Model']['scheduler_name']
     config.num_classes = int(values['Model']['num_classes'])
     config.add_special_token = values['Model'].getboolean('add_special_token', 'b')
-    #config.new_special_token_list = ast.literal_eval(values.get("Model", "new_special_token_list"))
+    config.new_special_token_list = ast.literal_eval(values.get("Model", "new_special_token_list"))
+    config.tokenizer_method = values['Model']['tokenizer_method']
 
     # For Loss
     config.loss_name = values['Loss']['loss_name']
@@ -64,6 +67,7 @@ def read_config(paths):
 
     # Etc
     config.seed = int(values['Etc']['seed'])
+    config.make_inference = values['Etc'].getboolean('make_inference', 'b')
 
     return config
 
