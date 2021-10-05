@@ -1,4 +1,8 @@
 import sys
+
+from torch.optim import optimizer
+from radam import RAdam
+
 sys.path.insert(0, '/opt/ml/code/')
 
 import pickle as pickle
@@ -19,13 +23,11 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassifi
 from transformers import RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer
 from transformers import ElectraTokenizer , ElectraModel , ElectraConfig
 from transformers.utils.dummy_pt_objects import DistilBertForSequenceClassification
-
-from transformers import BertForSequenceClassification, XLMRobertaForSequenceClassification, ElectraForSequenceClassification, DistilBertForSequenceClassification
-
 from load_data import *
 
 from transformers import Trainer, TrainingArguments
 from transformers import EarlyStoppingCallback
+from transformers.optimization import get_cosine_with_hard_restarts_schedule_with_warmup
 
 import wandb , logging
 
@@ -133,31 +135,30 @@ def train():
   logger.info("********************************\n")
 
   # 1. Start a new run
-  wandb.init(project='LJH', entity='clue')
+  wandb.init(project='LJH', entity='clue',name="roberta-large-LJH" )
 
   #fix a seed
   seed_everything(args.seed)
   # load model and tokenizer
 
   MODEL_NAME = args.model_name
-  tokenizer = BertTokenizer.from_pretrained(MODEL_NAME)
-  #tokenizer = RobertaTokenizer.from_pretrained(MODEL_NAME)
+  tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
   # load dataset
-  train_dataset = load_data("/opt/ml/dataset/train/added_data.csv")
+  train_dataset = load_data("/opt/ml/dataset/train/train.csv")
   # dev_dataset = load_data("../dataset/train/dev.csv")
-  #train_dataset , dev_dataset = train_test_split(train_dataset, test_size = 0.1 , random_state= 42)
+  train_dataset , dev_dataset = train_test_split(train_dataset, test_size = 0.2 , random_state= 42)
 
   train_label = label_to_num(train_dataset['label'].values)
-  #dev_label = label_to_num(dev_dataset['label'].values)
+  dev_label = label_to_num(dev_dataset['label'].values)
 
   # tokenizing dataset
-  tokenized_train = tokenized_dataset(train_dataset, tokenizer)
-  #tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
+  tokenized_train = tokenized_dataset(train_dataset, tokenizer,args.max_len)
+  tokenized_dev = tokenized_dataset(dev_dataset, tokenizer,args.max_len)
 
   # make dataset for pytorch.
   RE_train_dataset = RE_Dataset(tokenized_train, train_label)
-  #RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
+  RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
 
   device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -168,7 +169,7 @@ def train():
   
   model_config.num_labels = 30
 
-  model = BertForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
+  model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
    
   print(model.config)
   model.parameters
@@ -183,12 +184,12 @@ def train():
     num_train_epochs=args.epochs,              # total number of training epochs
     learning_rate=args.lr,               # learning_rate
     per_device_train_batch_size=args.batch_size,  # batch size per device during training
-    per_device_eval_batch_size=16,   # batch size for evaluation
+    per_device_eval_batch_size=8,   # batch size for evaluation
     warmup_steps=args.warmup_steps,                # number of warmup steps for learning rate scheduler
     weight_decay=args.weight_decay,               # strength of weight decay
     logging_dir=args.save_path + 'logs',            # directory for storing logs
     logging_steps=100,              # log saving step.
-    lr_scheduler_type=args.scheduler,            # scheduler
+    #lr_scheduler_type=args.scheduler,            # scheduler
     evaluation_strategy='steps', # evaluation strategy to adopt during training
                                 # `no`: No evaluation during training.
                                 # `steps`: Evaluate every `eval_steps`.
@@ -197,17 +198,28 @@ def train():
     load_best_model_at_end = True ,
     #------* Wandb * -----------#
     report_to="wandb",  # enable logging to W&B
-    run_name="koelectra-LJH"  # name of the W&B run (optional)
   )
+
+  ### callback & optimizer & scheduler 추가
+  MyCallback = EarlyStoppingCallback(early_stopping_patience=4, early_stopping_threshold=0.0001)
+  #optimizer = RAdam(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, degenerated_to_sgd=False)
+  optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=args.weight_decay, amsgrad=False)
+  
 
   trainer = Trainer(
     model=model,                         # the instantiated 🤗 Transformers model to be trained
     args=training_args,                  # training arguments, defined above
     train_dataset=RE_train_dataset,         # training dataset
-    eval_dataset=RE_train_dataset,             # evaluation dataset
-    compute_metrics=compute_metrics         # define metrics function
+    eval_dataset=RE_dev_dataset,             # evaluation dataset
+    compute_metrics=compute_metrics,        # define metrics function
+    callbacks=[MyCallback],
+    optimizers = (
+      optimizer, get_cosine_with_hard_restarts_schedule_with_warmup(
+            optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=len(RE_train_dataset)* args.epochs)
+    )
   )
-
+  #scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optimizer, lr_lambda=lambda epoch: 0.95 ** epoch,last_epoch=-1,verbose=False)
+                       
   # train model
   trainer.train()
   model.save_pretrained('./best_model')
@@ -217,16 +229,17 @@ def main():
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument('--model_type', default="bert",type=str, help='model type(default=bert)')
-  parser.add_argument('--model_name', default="klue/bert-base",type=str, help='model name(default="klue/bert-base")')
+  parser.add_argument('--model_type', default="roberta",type=str, help='model type(default=bert)')
+  parser.add_argument('--model_name', default="klue/roberta-large",type=str, help='model name(default="klue/bert-base")')
   parser.add_argument('--save_path', default="./",type=str, help='saved path(default=./)')
   parser.add_argument('--save_step', default=500,type=int, help='model saving step(default=500)')
   parser.add_argument('--save_limit', default=5,type=int, help='# of save model(default=5)')
-  parser.add_argument('--seed', type=int, default=1, help='random seed (default: 42)')
-  parser.add_argument('--epochs', type=int, default=5, help='number of epochs to train (default: 20)')
-  parser.add_argument('--batch_size', type=int, default=16, help='batch size per device during training (default: 16)')
-  parser.add_argument('--lr', type=float, default=5e-5, help='learning rate (default: 5e-5)')
-  parser.add_argument('--weight_decay', type=float, default=0.01, help='strength of weight decay(default: 0.01)')
+  parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
+  parser.add_argument('--epochs', type=int, default=4, help='number of epochs to train (default: 20)')
+  parser.add_argument('--batch_size', type=int, default=8, help='batch size per device during training (default: 16)')
+  parser.add_argument('--max_len', type=int, default=128, help='max length (default: 256)')
+  parser.add_argument('--lr', type=float, default=1e-5, help='learning rate (default: 5e-5)')
+  parser.add_argument('--weight_decay', type=float, default=0, help='strength of weight decay(default: 0.01)')
   parser.add_argument('--warmup_steps', type=int, default=500, help='number of warmup steps for learning rate scheduler(default: 500)')
   parser.add_argument('--scheduler', type=str, default="linear", help='scheduler(default: "linear")')
   args = parser.parse_args()
@@ -244,6 +257,3 @@ if __name__ == '__main__':
   seed_everything(args.seed)
 
   main()
-    
-
-

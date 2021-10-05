@@ -25,7 +25,7 @@ def inference(model, tokenized_sent, device):
       outputs = model(
           input_ids=data['input_ids'].to(device),
           attention_mask=data['attention_mask'].to(device),
-          token_type_ids=data['token_type_ids'].to(device)
+          #token_type_ids=data['token_type_ids'].to(device)
           )
     logits = outputs[0]
     prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
@@ -57,7 +57,7 @@ def load_test_dataset(dataset_dir, tokenizer):
   test_dataset = load_data(dataset_dir)
   test_label = list(map(int,test_dataset['label'].values))
   # tokenizing dataset
-  tokenized_test = tokenized_dataset(test_dataset, tokenizer)
+  tokenized_test = tokenized_dataset(test_dataset, tokenizer,128)
   return test_dataset['id'], tokenized_test, test_label
 
 def main(args):
@@ -98,8 +98,7 @@ if __name__ == '__main__':
   
   # model dir 
   parser.add_argument('--model_dir', type=str, default="./best_model")
-  parser.add_argument('--model', type=str, default="klue/bert-base")
+  parser.add_argument('--model', type=str, default="klue/roberta-large")
   args = parser.parse_args()
   print(args)
   main(args)
-  
