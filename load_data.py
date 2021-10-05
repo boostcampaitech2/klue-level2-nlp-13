@@ -50,6 +50,55 @@ def tokenized_dataset(dataset, tokenizer):
   return tokenized_sentences
 
 
+def typed_entity_marker_punct(pd_dataset, tokenizer, max_length):
+  """ tokenizer에 따라 sentence를 tokenizing 합니다."""
+  type_to_ko = {"PER":"사람", "ORG":"단체", "POH" : "기타", "LOC" : "장소", "NOH" : "수량", "DAT" : "날짜"} 
+
+  sentence_list = []
+  for subject_dict, object_dict, sentence in zip(pd_dataset['subject_entity'], pd_dataset['object_entity'], pd_dataset["sentence"]):
+    #['@'] + ['*'] + subj_type + ['*'] + tokens_wordpiece
+    # ["#"] + ['^'] + obj_type + ['^'] + tokens_wordpiece
+    # sentence : 〈Something〉는 조지 해리슨이 쓰고 비틀즈가 1969년 앨범 《Abbey Road》에 담은 노래다.
+    #  "{'word': '비틀즈', 'start_idx': 24, 'end_idx': 26, 'type': 'ORG'}"
+    
+    sub_start = subject_dict["start_idx"]
+    sub_end = subject_dict["end_idx"] + 1
+
+    obj_start = object_dict["start_idx"]
+    obj_end = object_dict["end_idx"] + 1
+
+    object_type = object_dict["type"]
+    subject_type = subject_dict["type"]
+
+    if subject_dict["end_idx"] < object_dict["end_idx"]:
+      sentence = (sentence[:sub_start]
+                  + ' @ * ' + type_to_ko[subject_type] + " * " + sentence[sub_start:sub_end] + " @ "
+                  + sentence[sub_end:obj_start] 
+                  + " # ^ " + type_to_ko[object_type] + " ^ " +sentence[obj_start:obj_end] + " # " 
+                  + sentence[obj_end:]
+                )
+    else :
+      sentence = (sentence[:obj_start]
+                  + " # ^ " + type_to_ko[object_type] + " ^ " +sentence[obj_start:obj_end] + " # " 
+                  + sentence[obj_end:sub_start] 
+                  + ' @ * ' + type_to_ko[subject_type] + " * " + sentence[sub_start:sub_end] + " @ "
+                  + sentence[sub_end:]
+                )
+
+    sentence_list.append(sentence)
+  
+  tokenized_sentences = tokenizer(
+      sentence_list,
+      return_tensors="pt",
+      padding=True,
+      truncation=True,
+      max_length=max_length,
+      add_special_tokens=True,
+      return_token_type_ids = False,
+      )
+
+  return tokenized_sentences
+
 import json
 import pandas as pd
 from collections import defaultdict
