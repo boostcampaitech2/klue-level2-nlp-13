@@ -1,5 +1,7 @@
+from load_data import tokenized_dataset
 from optimizer import get_optimizer, get_scheduler
 from utills import * 
+from models import StratifiedSampler
 from loss import get_loss
 
 from torch.utils.data import DataLoader
@@ -18,20 +20,23 @@ def custom_train(config, model, train_dataset, valid_dataset, tokenizer):
 
   wandb.watch(model)
 
-  train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=5)
-  valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, num_workers=5)
+  y = torch.from_numpy(np.array(train_dataset.labels))
+  batch_sampler = StratifiedSampler(class_vector=y ,batch_size=config.batch_size)
 
-  text_table = wandb.Table(columns=['pred_label', 'real_label', 'text'])
+  train_loader = DataLoader(train_dataset, batch_size=config.batch_size, sampler=batch_sampler, num_workers=5)
+  valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, num_workers=5)
   
   os.makedirs(config.model_save_path, exist_ok=True)
   
   best_criterion = 0 # f1-score로
+  early_count = 0
 
   for epoch in range(config.num_train_epochs):
     # your training routine
     train_loss, train_f1_score, train_auprc = train_per_epoch(config, train_loader, model, optimizer, criterion)
 
     # vlidation routine
+    text_table = wandb.Table(columns=['pred_label', 'real_label', 'text'])
     valid_loss, valid_f1_score, valid_auprc = valid_per_epoch(config, valid_loader, model, criterion, text_table, valid_dataset, tokenizer)
 
     # learning rate controll
@@ -48,7 +53,12 @@ def custom_train(config, model, train_dataset, valid_dataset, tokenizer):
       best_criterion = valid_f1_score
       model.save_pretrained(config.model_save_path)
 
-  wandb.log({'Miss classification samples': text_table})
+    if valid_f1_score < best_criterion:
+      early_count += 1
+      if config.early_stopping == early_count:
+        break
+
+    wandb.log({'Miss classification samples': text_table})
  
 def train_per_epoch(config, train_loader, model, optimizer, criterion):
   model.train()
@@ -64,7 +74,12 @@ def train_per_epoch(config, train_loader, model, optimizer, criterion):
 
     optimizer.zero_grad()
 
-    pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
+    if config.use_entity_embedding:
+      entity_embed = item['Entity_type_embedding'].to(config.device)
+      entity_idxes = item['Entity_idxes'].to(config.device)
+      pred = model.forward(sentences, attention_mask=attention_mask, entity_location=entity_idxes, entity_type_ids=entity_embed, labels=target)
+    else:
+      pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
     logits = pred[1]
 
     loss = criterion(logits, target)
@@ -96,7 +111,12 @@ def valid_per_epoch(config, valid_loader, model, criterion, text_table, valid_da
       attention_mask = item['attention_mask'].to(config.device)
       target = item['labels'].to(config.device)
 
-      pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
+      if config.use_entity_embedding:
+        entity_embed = item['Entity_type_embedding'].to(config.device)
+        entity_idxes = item['Entity_idxes'].to(config.device)
+        pred = model.forward(sentences, attention_mask=attention_mask, entity_location=entity_idxes, entity_type_ids=entity_embed, labels=target)
+      else:
+        pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
       logits = pred[1]
 
       loss = criterion(logits, target)

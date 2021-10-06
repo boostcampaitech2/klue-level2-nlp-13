@@ -9,6 +9,7 @@ from train import *
 from custom_train import *
 from utills import *
 
+import torch
 from sklearn.model_selection import train_test_split
 
 if __name__ == "__main__":
@@ -45,27 +46,27 @@ if __name__ == "__main__":
     
     # 2. Load data
     print('='*10, "Data loading...", '='*10)
-    dataset = load_data(config.data_path, config)
+    train_dataset, valid_dataset = load_data(config.data_path, config)
 
         # class imbalanced 보완을 위한 loss 사용시, 가중치 계산 (utills.py)
     if 'weighted' in  config.loss_name:
-        label = label_to_num(config, dataset['label'].values)
+        label = label_to_num(config, train_dataset['label'].values)
         config.class_weight = get_class_weights(label)
         # 데이터 라벨의 비율 맞게 훈련/검증 데이터 분리
-    train_dataset, valid_dataset = train_test_split(dataset, test_size=0.2, stratify=dataset['label'], shuffle=True, random_state=config.random_state)
+    #train_dataset, valid_dataset = train_test_split(dataset, test_size=0.2, stratify=dataset['label'], shuffle=True, random_state=config.random_state)
     ####################################################### temp 시도
-    no_rel_dataset = train_dataset.loc[train_dataset['label']=='no_relation']
-    train_dataset = train_dataset.loc[train_dataset['label']!='no_relation']
-    train_dataset = pd.concat([train_dataset, no_rel_dataset.iloc[:3000]], axis=0)
+    #no_rel_dataset = train_dataset.loc[train_dataset['label']=='no_relation']
+    #train_dataset = train_dataset.loc[train_dataset['label']!='no_relation']
+    #train_dataset = pd.concat([train_dataset, no_rel_dataset.iloc[:3000]], axis=0)
     ######################################################
-    print('loded:\t', train_dataset.shape)
+    #print('loded:\t', train_dataset.shape)
 
         # 추가된 데이터를 사용 한다면
-    if config.use_aug_data:
-        aug_dataset = load_data(config.data_path, config)
-        aug_dataset = aug_dataset.loc[~aug_dataset['id'].isin(valid_dataset['id'])]
-        train_dataset = pd.concat([train_dataset, aug_dataset], axis=0)
-        print('changed:\t', train_dataset.shape)
+    # if config.use_aug_data:
+    #     aug_dataset = load_data(config.data_path, config)
+    #     aug_dataset = aug_dataset.loc[~aug_dataset['id'].isin(valid_dataset['id'])]
+    #     train_dataset = pd.concat([train_dataset, aug_dataset], axis=0)
+    #     print('changed:\t', train_dataset.shape)
         # 라벨-index 맵핑
     train_label = label_to_num(config, train_dataset['label'].values)
     valid_label = label_to_num(config, valid_dataset['label'].values)
@@ -76,7 +77,7 @@ if __name__ == "__main__":
         # 토크나이저 불러오기 (tokenizer.py)
     tokenizer = get_tokenizer(config.tokenizer_name)
         # 훈련/검증 각각 tokenizer 적용
-    if config.add_special_token:
+    if config.add_special_token == 'special':
         print("Add special token")
         # 추가 하고 싶은 Special token dict 정의
         special_tokens_dict = {'additional_special_tokens': config.new_special_token_list}
@@ -84,13 +85,17 @@ if __name__ == "__main__":
         num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
     tokenized_train = tokenized_dataset(config, train_dataset, tokenizer)
     tokenized_valid = tokenized_dataset(config, valid_dataset, tokenizer)
+    
+    if config.use_entity_embedding:
+        insert_entity_idx_tokenized_dataset(tokenizer, tokenized_train, config)
+        insert_entity_idx_tokenized_dataset(tokenizer, tokenized_valid, config)
     print('='*10, "END", '='*10)
 
     # 4. Make pytorch dataset
     print('='*10, "Make pytorch dataset...", '='*10)
         # 각각 데이터셋 클래스 적용
-    RE_train_dataset = RE_Dataset(tokenized_train, train_label)
-    RE_valid_dataset = RE_Dataset(tokenized_valid, valid_label)
+    RE_train_dataset = RE_Dataset(tokenized_train, train_label, config)
+    RE_valid_dataset = RE_Dataset(tokenized_valid, valid_label, config)
     print('='*10, "END", '='*10)
 
     # 5. Make model

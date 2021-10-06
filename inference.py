@@ -23,8 +23,9 @@ def inference(model, tokenized_sent, device):
   for i, data in enumerate(tqdm(dataloader)):
     with torch.no_grad():
       outputs = model(
-          input_ids=data['input_ids'].to(device),
-          attention_mask=data['attention_mask'].to(device)
+          input_ids = data['input_ids'].to(device),
+          attention_mask =data['attention_mask'].to(device),
+          entity_type_ids = data['Entity_type_embedding'].to(device),
           )
     logits = outputs[0]
     prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
@@ -59,6 +60,10 @@ def load_test_dataset(config, dataset_dir, tokenizer):
   
   # tokenizing dataset
   tokenized_test = tokenized_dataset(config, test_dataset, tokenizer)
+
+  if config.use_entity_embedding:
+    insert_entity_idx_tokenized_dataset(tokenized_test, config)
+
   return test_dataset['id'], tokenized_test, test_label
 
 def do_inference(config):
@@ -86,7 +91,8 @@ def do_inference(config):
   ## load test datset
   test_dataset_dir = config.test_data_path
   test_id, test_dataset, test_label = load_test_dataset(config, test_dataset_dir, tokenizer)
-  Re_test_dataset = RE_Dataset(test_dataset ,test_label)
+
+  Re_test_dataset = RE_Dataset(test_dataset ,test_label, config)
 
   ## predict answer
   pred_answer, output_prob = inference(model, Re_test_dataset, device) # model에서 class 추론

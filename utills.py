@@ -1,9 +1,13 @@
 import configparser
 import wandb
+import pandas as pd
 import numpy as np
+import json
 import pickle as pickle
 import ast
+from collections import defaultdict
 
+import torch
 import sklearn
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 
@@ -31,9 +35,10 @@ def read_config(paths):
     config.optimizer_name = values['Model']['optimizer_name']
     config.scheduler_name = values['Model']['scheduler_name']
     config.num_classes = int(values['Model']['num_classes'])
-    config.add_special_token = values['Model'].getboolean('add_special_token', 'b')
+    config.add_special_token = values['Model']['add_special_token']
     config.new_special_token_list = ast.literal_eval(values.get("Model", "new_special_token_list"))
     config.prediction_mode = values['Model']['prediction_mode']
+    config.use_entity_embedding = values['Model']['use_entity_embedding']
 
     # For Loss
     config.loss_name = values['Loss']['loss_name']
@@ -171,3 +176,68 @@ def logging_with_console(epoch, train_loss, train_f1_score, train_auprc, valid_l
         f"valid_f1:{valid_f1_score:.2f} | "
         f"valid_auprc:{valid_auprc:.2f}"
   )
+
+def get_entity_idxes(tokenizer, token_list, config):
+  entity_embedding = np.zeros(len(token_list))
+  if config.add_special_token == 'special':
+    entity_embedding[np.where(token_list==32000)[0][0]+1:np.where(token_list==32001)[0][0]] = 1
+    entity_embedding[np.where(token_list==32002)[0][0]+1:np.where(token_list==32003)[0][0]] = 1
+    return entity_embedding
+  elif config.add_special_token == 'punct':
+    # @: 36, *: 14, +: 15, ^: 65, 사람: 3611, 단체: 3971, 기타: 5867, 장소: 4938, 수량: 12395, 날짜: 9384
+    subj_1 = tokenizer.convert_tokens_to_ids('@')
+    subj_2 = tokenizer.convert_tokens_to_ids('*')
+    obj_1 = tokenizer.convert_tokens_to_ids('+')
+    obj_2 = tokenizer.convert_tokens_to_ids('^')
+    names = tokenizer.convert_tokens_to_ids(['사람','단체', '기타', '장소', '수량', '날짜'])
+
+    sjb_start_idx = 0
+    sjb_end_idx = 0
+    for idx, t in enumerate(token_list):
+        if t == subj_1 and token_list[idx+1] == subj_2 and (token_list[idx+2] in names):
+            sjb_start_idx = idx + 4
+            sjb_end_idx = sjb_start_idx + 1
+            while token_list[sjb_end_idx] != subj_1:
+                sjb_end_idx += 1
+            break
+
+    entity_embedding[sjb_start_idx:sjb_end_idx] = 1
+
+    obj_start_idx = 0
+    obj_end_idx = 0
+    for idx, t in enumerate(token_list):
+        if t == obj_1 and token_list[idx+1] == obj_2 and (token_list[idx+2] in names):
+            obj_start_idx = idx + 4
+            obj_end_idx = obj_start_idx + 1
+            while token_list[obj_end_idx] != obj_1:
+                obj_end_idx += 1
+            break
+    entity_embedding[obj_start_idx:obj_end_idx] = 1
+    return entity_embedding, sjb_start_idx, sjb_end_idx, obj_start_idx, obj_end_idx
+
+def insert_entity_idx_tokenized_dataset(tokenizer, dataset, config):
+  if config.add_special_token == 'special':
+      entity_embeddings = [get_entity_idxes(tokenizer, ids, config) for ids in dataset['input_ids'].numpy()]
+      dataset['Entity_type_embedding'] = torch.tensor(entity_embeddings).to(torch.int64)
+  elif config.add_special_token == 'punct':
+      entity_embeddings = []
+      entity_idxes = []
+      for ids in dataset['input_ids'].numpy():
+          entity_embedding, sjb_start_idx, sjb_end_idx, obj_start_idx, obj_end_idx = get_entity_idxes(tokenizer, ids, config)
+          entity_embeddings.append(entity_embedding)
+          entity_idxes.append([sjb_start_idx, sjb_end_idx, obj_start_idx, obj_end_idx])
+      dataset['Entity_type_embedding'] = torch.tensor(entity_embeddings).to(torch.int64)
+      dataset['Entity_idxes'] = torch.tensor(entity_idxes).to(torch.int64)
+
+def json_to_df():
+    json_path = "/opt/ml/dataset/train/klue-re-v1.1_dev.json"
+    with open(json_path) as f:
+        json_object = json.load(f)
+    data = defaultdict(list)
+    for dict in json_object:
+        for key, value in dict.items():
+            data[key].append(str(value))
+
+    df = pd.DataFrame(data)
+    df = df.rename(columns={"guid": "id"})
+    return df
