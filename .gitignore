@@ -4,6 +4,11 @@ configs/
 *.out
 nohup.out
 __pycache__/
+*.pyc
 logs/
 .ipynb_chekpoints
 results/
+*.ini
+best_model/
+prediction/
+*checkpoint.ipynb

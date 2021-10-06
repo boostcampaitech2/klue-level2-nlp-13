@@ -1,11 +1,14 @@
 import os
 import configparser
 import wandb
+import pandas as pd
 import numpy as np
 import pickle as pickle
 import ast
 import torch
 import random
+import json
+from collections import defaultdict
 
 import sklearn
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
@@ -149,3 +152,20 @@ def seed_everything(seed):
   torch.backends.cudnn.benchmark = False
   np.random.seed(seed)
   random.seed(seed)  
+
+import json
+from collections import defaultdict
+
+
+
+def json_to_df(json_path):
+    with open(json_path) as f:
+        json_object = json.load(f)
+    data = defaultdict(list)
+    for dict in json_object:
+        for key, value in dict.items():
+            data[key].append(value) 
+
+    df = pd.DataFrame(data)
+
+    return df
