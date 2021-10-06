@@ -12,3 +12,5 @@ results/
 best_model/
 prediction/
 *checkpoint.ipynb
+pre_model/
+*.gitignore
