@@ -10,7 +10,7 @@ from transformers import AutoTokenizer, AutoConfig,AutoModelForMaskedLM, AutoMod
 from load_data import *
 import argparse
 import wandb
-
+import importlib
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -84,20 +84,21 @@ def train(args):
   # csv to df & str to dict
   train_dataset = load_data("/opt/ml/dataset/train/train.csv")
 
-  train_label = label_to_num(train_dataset['label'].values)
-  # dev_label = label_to_num(dev_dataset['label'].values)
+  dev_json_path = "/opt/ml/KLUE-Baseline/data/klue_benchmark/klue-re-v1.1/klue-re-v1.1_dev.json"
+  dev_dataset = json_to_df(dev_json_path)
 
-  # make tokenized tensor
-  tokenized_train = tokenized_dataset(train_dataset, tokenizer)
-  # tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
 
   # make tokenized tensor, typed_entity_marker_punct
-  tokenized_train = typed_entity_marker_punct(train_dataset, tokenizer, MAX_LENGTH)
-  # tokenized_dev = typed_entity_marker_punct(dev_dataset, tokenizer, MAX_LENGTH)
+  module = importlib.import_module('load_data')
+  train_entity_set = getattr(module, args.train_entity_set)
+  dev_entity_set = getattr(module, args.dev_entity_set)
+
+  tokenized_train, train_label = train_entity_set(train_dataset, tokenizer, MAX_LENGTH, argu = True)
+  tokenized_dev, dev_label = dev_entity_set(dev_dataset, tokenizer, MAX_LENGTH)
 
   # make dataset for pytorch.
   RE_train_dataset = RE_Dataset(tokenized_train, train_label)
-  # RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
+  RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
 
   device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -106,9 +107,6 @@ def train(args):
   model_config =  AutoConfig.from_pretrained(MODEL_NAME)
   model_config.num_labels = 30
 
-  # if MODEL_NAME == "klue/roberta-base":
-  #   model = AutoModelForMaskedLM.from_pretrained(MODEL_NAME)#, config = model_config)
-  # else:
   model =  AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
 
   print(model.config)
@@ -122,27 +120,23 @@ def train(args):
     num_train_epochs = EPOCH,              # total number of training epochs
     learning_rate=5e-5,               # learning_rate
     per_device_train_batch_size = BATCH_SIZE,  # batch size per device during training
-    per_device_eval_batch_size = 64,   # batch size for evaluation
+    per_device_eval_batch_size = BATCH_SIZE,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
     weight_decay=0.01,               # strength of weight decay
     logging_dir='./logs',            # directory for storing logs
     logging_steps=100,              # log saving step.
     
-    evaluation_strategy='epoch', # evaluation strategy to adopt during training
+    evaluation_strategy='steps', # evaluation strategy to adopt during training
                                 # `no`: No evaluation during training.
                                 # `steps`: Evaluate every `eval_steps`.
                                 # `epoch`: Evaluate every end of epoch.
-    # eval_steps = 500,            # evaluation step.
-    save_total_limit=3,              # number of total save model.
+    eval_steps = 500,            # evaluation step.
+    save_total_limit = 3,              # number of total save model.
     # save_steps=500,                 # model saving step.
     # save_strategy = "epoch",
 
-    label_smoothing_factor= 0.1,
-    dataloader_drop_last = True,
-
-    load_best_model_at_end = True,
-    
-    report_to = ["wandb"],  # enable logging to W&B
+    load_best_model_at_end = True,    
+    # report_to = ["wandb"],  # enable logging to W&B
     run_name = RUN_NAME,
   )
 
@@ -150,7 +144,7 @@ def train(args):
     model=model,                         # the instantiated 🤗 Transformers model to be trained
     args=training_args,                  # training arguments, defined above
     train_dataset=RE_train_dataset,         # training dataset
-    eval_dataset=RE_train_dataset,             # evaluation dataset
+    eval_dataset=RE_dev_dataset,             # evaluation dataset
     compute_metrics=compute_metrics         # define metrics function
   )
 
@@ -192,6 +186,10 @@ if __name__ == '__main__':
   parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
   parser.add_argument('--save__dir', type=str, default='./best_model', help='model save at {SM_MODEL_DIR}/{name}')
   parser.add_argument('--run_name', required=True, type=str, default='name_nth_modelname', help='model name shown in wandb. (Usage: name_nth_modelname, Example: seyoung_1st_resnet18')
+  
+  parser.add_argument('--train_entity_set', required=True, type=str, default='entity_marker_punct')
+  parser.add_argument('--dev_entity_set', required=True, type=str, default='entity_marker_punct')
+
 
   args = parser.parse_args()
 
