@@ -9,3 +9,5 @@ logs/
 results/
 best_model/
 prediction/
+vocab/
+*.json
