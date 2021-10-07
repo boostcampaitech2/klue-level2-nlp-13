@@ -33,7 +33,7 @@ def read_config(paths):
   config.scheduler_name = values['Model']['scheduler_name']
   config.num_classes = int(values['Model']['num_classes'])
   config.add_special_token = values['Model'].getboolean('add_special_token', 'b')
-  #config.new_special_token_list = ast.literal_eval(values.get("Model", "new_special_token_list"))
+  config.new_special_token_list = ast.literal_eval(values.get("Model", "new_special_token_list"))
 
   # For Loss
   config.loss_name = values['Loss']['loss_name']

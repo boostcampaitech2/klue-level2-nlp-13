@@ -4,6 +4,7 @@ import torch
 from loss import MyTrainer
 from utils import * 
 
+import random
 import pickle as pickle
 import os
 import pandas as pd
@@ -20,7 +21,8 @@ def train(config, model, train_dataset, valid_dataset):
     scheduler = get_scheduler(optimizer, config)
     optimizers = (optimizer, scheduler)
 
-
+    now_seed = random.randint(1,100)
+    print("+"*7,now_seed,"+"*7)
     # 사용한 option 외에도 다양한 option들이 있습니다.
     # https://huggingface.co/transformers/main_classes/trainer.html#trainingarguments 참고해주세요.
     training_args = TrainingArguments(                
@@ -42,7 +44,7 @@ def train(config, model, train_dataset, valid_dataset):
                                                         # `epoch`: Evaluate every end of epoch.
         eval_steps = config.eval_steps,                 # evaluation step.
         load_best_model_at_end = True,
-        seed = config.seed                             # random seed
+        seed = 516                           # random seed
     )
 
     # Custom Loss 사용을 위해 Trainner 정의 (loss.py)

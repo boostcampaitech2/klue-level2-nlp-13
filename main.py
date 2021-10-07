@@ -14,12 +14,13 @@ from sklearn.model_selection import train_test_split
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-# RuntimeError: CUDA out of memory.
 import gc
-gc.collect()
-torch.cuda.empty_cache()
 
 if __name__ == "__main__":
+    # RuntimeError: CUDA out of memory.
+    gc.collect()
+    torch.cuda.empty_cache()
+
     argv = sys.argv
     file_name = argv[0] # 실행시키는 파일명
     config_path = ""   # config file 경로
@@ -61,7 +62,11 @@ if __name__ == "__main__":
         label = label_to_num(config, dataset['label'].values)
         config.class_weight = get_class_weights(label)
         # 데이터 라벨의 비율 맞게 훈련/검증 데이터 분리
-    train_dataset, valid_dataset = train_test_split(dataset, test_size=0.2, stratify=dataset['label'], random_state=config.random_state)
+    # train_dataset, valid_dataset = train_test_split(dataset, test_size=0.2, stratify=dataset['label'], random_state=config.random_state)
+    train_dataset = dataset
+    valid_dataset = load_data('./eval.csv')
+    print(train_dataset['label'].head())
+    print(valid_dataset['label'].head())
         # 라벨-index 맵핑
     train_label = label_to_num(config, train_dataset['label'].values)
     valid_label = label_to_num(config, valid_dataset['label'].values)
