@@ -7,7 +7,6 @@ import json
 import pandas as pd
 from collections import defaultdict
 
-train_json_path = "/opt/ml/KLUE-Baseline/data/klue_benchmark/klue-re-v1.1/klue-re-v1.1_train.json"
 dev_json_path = "/opt/ml/KLUE-Baseline/data/klue_benchmark/klue-re-v1.1/klue-re-v1.1_dev.json"
 
 def json_to_df(json_path):
@@ -82,7 +81,7 @@ def typed_entity_marker_punct(pd_dataset, tokenizer, max_length):
   for subject_dict, object_dict, sentence in zip(pd_dataset['subject_entity'], pd_dataset['object_entity'], pd_dataset["sentence"]):
     #['@'] + ['*'] + subj_type + ['*'] + tokens_wordpiece
     # ["#"] + ['^'] + obj_type + ['^'] + tokens_wordpiece
-    # sentence : 〈Something〉는 조지 해리슨이 쓰고 비틀즈가 1969년 앨범 《Abbey Road》에 담은 노래다.
+    # sentence : 〈Something〉는 @ * 사람 * 조지 해리슨 @ 이 쓰고 비틀즈가 1969년 앨범 《Abbey Road》에 담은 노래다.
     #  "{'word': '비틀즈', 'start_idx': 24, 'end_idx': 26, 'type': 'ORG'}"
     
     sub_start = subject_dict["start_idx"]
@@ -121,7 +120,9 @@ def typed_entity_marker_punct(pd_dataset, tokenizer, max_length):
       return_token_type_ids = False,
       )
 
-  return tokenized_sentences, pd_dataset['label'].values
+  labels = label_to_num(pd_dataset['label'].values)
+
+  return tokenized_sentences, labels
 
 def mix_word(pd_dataset, except_label = []):
   # 라벨별로 서로 단어들을 섞어준다.
@@ -178,13 +179,12 @@ def argu2(pd_dataset):
   
   return argu_df
 
-def entity_marker_punct(pd_dataset, tokenizer, max_length = 256, argu = False):
+def entity_marker_punct(pd_dataset, tokenizer, max_length = 256, argu = False, state = "train"):
   """ tokenizer에 따라 sentence를 tokenizing 합니다."""
 
-  # if argu:
-  #   argu_df = argue_dataset(pd_dataset)
-  argu_df = argu2(pd_dataset)
-  pd_dataset = pd.concat([pd_dataset, argu_df ])
+  if argu:
+    argu_df = argu2(pd_dataset)
+    pd_dataset = pd.concat([pd_dataset, argu_df])
 
   sentence_list = []
   for subject_dict, object_dict, sentence, sub_word, obj_word in zip(pd_dataset['subject_entity']
@@ -238,8 +238,10 @@ def entity_marker_punct(pd_dataset, tokenizer, max_length = 256, argu = False):
     for v in label:
       num_label.append(dict_label_to_num[v])
     return num_label
-
-  labels = label_to_num(pd_dataset['label'].values)
+  
+  labels = None
+  if state == "train":
+    labels = label_to_num(pd_dataset['label'].values)
 
   return tokenized_sentences, labels
 
@@ -284,6 +286,8 @@ if __name__ == "__main__":
 # len(tokenized_train["input_ids"])
 # #%%
 # len(RE_train_dataset)
-# # #%%
-# # print(tokenizer.decode(RE_train_dataset[3]["input_ids"]))
-# # # %%
+# #%%
+# print(tokenizer.decode(RE_train_dataset[2]["input_ids"]))
+# # %%
+
+# # %%

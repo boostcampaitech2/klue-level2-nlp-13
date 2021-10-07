@@ -93,20 +93,22 @@ def train(args):
   train_entity_set = getattr(module, args.train_entity_set)
   dev_entity_set = getattr(module, args.dev_entity_set)
 
-  tokenized_train, train_label = train_entity_set(train_dataset, tokenizer, MAX_LENGTH, argu = True)
+  tokenized_train, train_label = train_entity_set(train_dataset, tokenizer, MAX_LENGTH)
   tokenized_dev, dev_label = dev_entity_set(dev_dataset, tokenizer, MAX_LENGTH)
 
   # make dataset for pytorch.
   RE_train_dataset = RE_Dataset(tokenized_train, train_label)
   RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
 
+  print("train", len(RE_train_dataset))
+  print("dev", len(RE_dev_dataset))
+
+
   device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-  print(device)
   #setting model hyperparameter
   model_config =  AutoConfig.from_pretrained(MODEL_NAME)
   model_config.num_labels = 30
-
   model =  AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
 
   print(model.config)
@@ -120,7 +122,7 @@ def train(args):
     num_train_epochs = EPOCH,              # total number of training epochs
     learning_rate=5e-5,               # learning_rate
     per_device_train_batch_size = BATCH_SIZE,  # batch size per device during training
-    per_device_eval_batch_size = BATCH_SIZE,   # batch size for evaluation
+    per_device_eval_batch_size = 128,   # batch size for evaluation
     warmup_steps=500,                # number of warmup steps for learning rate scheduler
     weight_decay=0.01,               # strength of weight decay
     logging_dir='./logs',            # directory for storing logs
@@ -130,10 +132,10 @@ def train(args):
                                 # `no`: No evaluation during training.
                                 # `steps`: Evaluate every `eval_steps`.
                                 # `epoch`: Evaluate every end of epoch.
-    eval_steps = 500,            # evaluation step.
-    save_total_limit = 3,              # number of total save model.
-    # save_steps=500,                 # model saving step.
-    # save_strategy = "epoch",
+    eval_steps = 1,            # evaluation step.
+    save_total_limit = 8,              # number of total save model.
+    save_steps = 500,                 # model saving step.
+    # save_strategy = "steps",
 
     load_best_model_at_end = True,    
     # report_to = ["wandb"],  # enable logging to W&B
