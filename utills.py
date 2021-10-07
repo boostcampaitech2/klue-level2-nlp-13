@@ -75,6 +75,9 @@ def read_config(paths):
     return config
 
 def label_to_num(config, label):
+  """
+    라벨로 되어 있던 class를 숫자로 변환 합니다.
+  """
   num_label = []
   with open(config.label_to_num, 'rb') as f:
     dict_label_to_num = pickle.load(f)
@@ -146,6 +149,7 @@ def compute_metrics(pred):
       'accuracy': acc,
   }
 
+# 각 클래스의 데이터 수 기반 class_weights 계산
 def get_class_weights(train_label):
   _ , class_num = np.unique(train_label, return_counts = True)
   print("Class number: ", _)
@@ -167,24 +171,28 @@ def logging_with_wandb(epoch, train_loss, train_f1_score, train_auprc, valid_los
     f"valid_auprc": valid_auprc,
     })
 
+# console에 결과 출력
 def logging_with_console(epoch, train_loss, train_f1_score, train_auprc, valid_loss, valid_f1_score, valid_auprc):
   print(f"epoch: {epoch} | "
         f"train_loss:{train_loss:.5f} | "
-        f"train_f1:{train_f1_score:.2f} |"
+        f"train_f1:{train_f1_score:.2f} | "
         f"train_auprc:{train_auprc:.2f} | "
         f"valid_loss:{valid_loss:.5f} | "
         f"valid_f1:{valid_f1_score:.2f} | "
         f"valid_auprc:{valid_auprc:.2f}"
   )
 
+# entity 표현 방식에 따른 entity 위치 계산
 def get_entity_idxes(tokenizer, token_list, config):
   entity_embedding = np.zeros(len(token_list))
   if config.add_special_token == 'special':
+    # 스페셜 토큰 위치로 쉽게 찾을 수 있음
     entity_embedding[np.where(token_list==32000)[0][0]+1:np.where(token_list==32001)[0][0]] = 1
     entity_embedding[np.where(token_list==32002)[0][0]+1:np.where(token_list==32003)[0][0]] = 1
     return entity_embedding
-  elif config.add_special_token == 'punct':
+  elif config.add_special_token == 'punct_type':
     # @: 36, *: 14, +: 15, ^: 65, 사람: 3611, 단체: 3971, 기타: 5867, 장소: 4938, 수량: 12395, 날짜: 9384
+    # 패턴을 이용해 찾기
     subj_1 = tokenizer.convert_tokens_to_ids('@')
     subj_2 = tokenizer.convert_tokens_to_ids('*')
     obj_1 = tokenizer.convert_tokens_to_ids('+')
@@ -212,14 +220,46 @@ def get_entity_idxes(tokenizer, token_list, config):
             while token_list[obj_end_idx] != obj_1:
                 obj_end_idx += 1
             break
-    entity_embedding[obj_start_idx:obj_end_idx] = 1
+    entity_embedding[obj_start_idx:obj_end_idx] = 2
     return entity_embedding, sjb_start_idx, sjb_end_idx, obj_start_idx, obj_end_idx
 
+  elif config.add_special_token == 'punct':
+    # 패턴을 이용해 찾기
+    subj_1 = tokenizer.convert_tokens_to_ids('@')
+    subj_2 = tokenizer.convert_tokens_to_ids('*')
+    obj_1 = tokenizer.convert_tokens_to_ids('+')
+    obj_2 = tokenizer.convert_tokens_to_ids('^')
+
+    sjb_start_idx = 0
+    sjb_end_idx = 0
+    for idx, t in enumerate(token_list):
+        if t == subj_1 and token_list[idx+1] == subj_2:
+            sjb_start_idx = idx + 2
+            sjb_end_idx = sjb_start_idx + 1
+            while token_list[sjb_end_idx] != subj_1:
+                sjb_end_idx += 1
+            break
+
+    entity_embedding[sjb_start_idx:sjb_end_idx] = 1
+
+    obj_start_idx = 0
+    obj_end_idx = 0
+    for idx, t in enumerate(token_list):
+        if t == obj_1 and token_list[idx+1] == obj_2:
+            obj_start_idx = idx + 2
+            obj_end_idx = obj_start_idx + 1
+            while token_list[obj_end_idx] != obj_1:
+                obj_end_idx += 1
+            break
+
+    return entity_embedding, sjb_start_idx, sjb_end_idx, obj_start_idx, obj_end_idx
+
+# entity 표현 방식에 따른 entity 위치 계산한 것 반환 받아 dataset에 넣어주기
 def insert_entity_idx_tokenized_dataset(tokenizer, dataset, config):
   if config.add_special_token == 'special':
       entity_embeddings = [get_entity_idxes(tokenizer, ids, config) for ids in dataset['input_ids'].numpy()]
       dataset['Entity_type_embedding'] = torch.tensor(entity_embeddings).to(torch.int64)
-  elif config.add_special_token == 'punct':
+  elif config.add_special_token == 'punct' or config.add_special_token == 'punct_type':
       entity_embeddings = []
       entity_idxes = []
       for ids in dataset['input_ids'].numpy():
@@ -229,6 +269,7 @@ def insert_entity_idx_tokenized_dataset(tokenizer, dataset, config):
       dataset['Entity_type_embedding'] = torch.tensor(entity_embeddings).to(torch.int64)
       dataset['Entity_idxes'] = torch.tensor(entity_idxes).to(torch.int64)
 
+# joson 데이터 불러오기
 def json_to_df():
     json_path = "/opt/ml/dataset/train/klue-re-v1.1_dev.json"
     with open(json_path) as f:

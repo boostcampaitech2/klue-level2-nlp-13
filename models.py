@@ -10,7 +10,8 @@ class MyRobertaClassificationHead(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size*3, config.hidden_size)
+        self.dense1 = nn.Linear(config.hidden_size*3, config.hidden_size*2)
+        self.dense2 = nn.Linear(config.hidden_size*2, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
@@ -33,12 +34,14 @@ class MyRobertaClassificationHead(nn.Module):
         subject_entity_avgs = torch.tensor(subject_entity_avgs)
         oject_entity_avgs = torch.tensor(oject_entity_avgs)
         #print(subject_entity_avg.shape, oject_entity_avg.shape, features[:, 0, :].shape)
-
+        
         x = torch.cat([features[:, 0, :], subject_entity_avg, oject_entity_avg], axis = 1)
         x = self.dropout(x)
-        x = self.dense(x)
+        x = self.dense1(x)
         x = torch.tanh(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
+        x = self.dense2(x)
+        x = torch.tanh(x)
         x = self.out_proj(x)
         return x
 
@@ -93,18 +96,6 @@ class MyRobertaForSequenceClassification(RobertaPreTrainedModel):
         output = (logits,) + outputs[2:]
         return ((loss,) + output) if loss is not None else output
 
-def get_model(model_name, num_classes):
-    if  model_name == 'custom_robert':
-        model_config =  AutoConfig.from_pretrained('klue/roberta-large')
-        model_config.num_labels = num_classes
-        model = MyRobertaForSequenceClassification.from_pretrained('klue/roberta-large', config=model_config)
-    else:
-        model_config =  AutoConfig.from_pretrained(model_name)
-        model_config.num_labels = num_classes
-        model = AutoModelForSequenceClassification.from_pretrained(model_name, config=model_config)
-
-    return model
-
 class StratifiedSampler(Sampler):
     """Stratified Sampling
     Provides equal representation of target classes in each batch
@@ -141,3 +132,19 @@ class StratifiedSampler(Sampler):
 
     def __len__(self):
         return len(self.class_vector)
+
+def get_model(model_name, num_classes):
+    if  model_name == 'custom_robert_base':
+        model_config =  AutoConfig.from_pretrained('./roberta-retrained/base/')
+        model_config.num_labels = num_classes
+        model = MyRobertaForSequenceClassification.from_pretrained('./roberta-retrained/base/', config=model_config)#'klue/roberta-base', config=model_config)
+    elif  model_name == 'custom_robert_large':
+        model_config =  AutoConfig.from_pretrained('./roberta-retrained/large/')
+        model_config.num_labels = num_classes
+        model = MyRobertaForSequenceClassification.from_pretrained('./roberta-retrained/large/', config=model_config)#'klue/roberta-base', config=model_config)
+    else:
+        model_config =  AutoConfig.from_pretrained(model_name)
+        model_config.num_labels = num_classes
+        model = AutoModelForSequenceClassification.from_pretrained(model_name, config=model_config)
+
+    return model

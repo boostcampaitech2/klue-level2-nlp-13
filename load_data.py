@@ -60,7 +60,7 @@ def preprocessing_dataset(dataset):
 
   return out_dataset
 
-def load_data(dataset_dir, config):
+def load_data(dataset_dir, config, type):
   """ csv 파일을 경로에 맡게 불러 옵니다. """
   pd_dataset = pd.read_csv(dataset_dir)
 
@@ -69,21 +69,37 @@ def load_data(dataset_dir, config):
   elif config.prediction_mode == 'multi':
     pd_dataset = pd_dataset.loc[pd_dataset.label != 'no_relation']
 
-  valid = preprocessing_dataset(json_to_df())
   dataset = preprocessing_dataset(pd_dataset)
-
-  return dataset, valid
+  if type == 'main':
+    valid = preprocessing_dataset(json_to_df())
+    return dataset, valid
+  return dataset
 
 def tokenized_dataset(config, dataset, tokenizer):
   """ tokenizer에 따라 sentence를 tokenizing 합니다."""
   
   concat_entity = []
-  if config.add_special_token == 'punct':
+  if config.add_special_token == 'punct_type':
     type_to_ko = {"PER":"사람", "ORG":"단체", "POH" : "기타", "LOC" : "장소", "NOH" : "수량", "DAT" : "날짜"}
     for idx, (e01_idx, e01_type, e02_idx, e02_type) in enumerate(zip(dataset['subject_entity_idx'], dataset['subject_entity_types'], dataset['object_entity_idx'], dataset['object_entity_types'])):
         temp_sentence = dataset['sentence'].iloc[idx]
         temp_sentence = (temp_sentence[:e01_idx[0]] + f'@ * {type_to_ko[e01_type]} * ' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + ' @ ' 
         + temp_sentence[e01_idx[1]+1:e02_idx[0]] + f'+ ^ {type_to_ko[e02_type]} ^ ' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + ' + ' + temp_sentence[e02_idx[1]+1:])
+        dataset['sentence'].iloc[idx] = temp_sentence
+    tokenized_sentences = tokenizer(
+        list(dataset['sentence']),
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=256,
+        add_special_tokens=True,
+        #return_token_type_ids=False, # 문장 id
+        )
+  elif config.add_special_token == 'punct':
+    for idx, (e01_idx, e01_type, e02_idx, e02_type) in enumerate(zip(dataset['subject_entity_idx'], dataset['subject_entity_types'], dataset['object_entity_idx'], dataset['object_entity_types'])):
+        temp_sentence = dataset['sentence'].iloc[idx]
+        temp_sentence = (temp_sentence[:e01_idx[0]] + f' @* ' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + ' @ ' 
+        + temp_sentence[e01_idx[1]+1:e02_idx[0]] + f' +^ ' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + ' + ' + temp_sentence[e02_idx[1]+1:])
         dataset['sentence'].iloc[idx] = temp_sentence
     tokenized_sentences = tokenizer(
         list(dataset['sentence']),

@@ -1,9 +1,11 @@
+from enum import auto
 from load_data import tokenized_dataset
 from optimizer import get_optimizer, get_scheduler
 from utills import * 
 from models import StratifiedSampler
 from loss import get_loss
 
+from torch.cuda.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
@@ -62,29 +64,33 @@ def custom_train(config, model, train_dataset, valid_dataset, tokenizer):
  
 def train_per_epoch(config, train_loader, model, optimizer, criterion):
   model.train()
+  scaler = GradScaler()
 
   pred_labels = []
   pred_probs = []
   target_labels = []
   train_loss = 0
+  optimizer.zero_grad()
   for batch_idx, item in enumerate(tqdm(train_loader)):
     sentences = item['input_ids'].to(config.device)
     attention_mask = item['attention_mask'].to(config.device)
     target = item['labels'].to(config.device)
 
-    optimizer.zero_grad()
-
-    if config.use_entity_embedding:
-      entity_embed = item['Entity_type_embedding'].to(config.device)
-      entity_idxes = item['Entity_idxes'].to(config.device)
-      pred = model.forward(sentences, attention_mask=attention_mask, entity_location=entity_idxes, entity_type_ids=entity_embed, labels=target)
-    else:
-      pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
+    with autocast():
+      if config.use_entity_embedding:
+        entity_embed = item['Entity_type_embedding'].to(config.device)
+        entity_idxes = item['Entity_idxes'].to(config.device)
+        pred = model.forward(sentences, attention_mask=attention_mask, entity_location=entity_idxes, entity_type_ids=entity_embed, labels=target)
+      else:
+        pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
     logits = pred[1]
 
     loss = criterion(logits, target)
-    loss.backward()
-    optimizer.step()
+    scaler.scale(loss).backward()
+    if batch_idx % 1 == 0:
+      scaler.step(optimizer)#.step()
+      scaler.update()
+      optimizer.zero_grad()
 
     train_loss += loss.detach().cpu().numpy()
     pred_labels.extend(torch.argmax(logits.cpu(), dim=1).detach().cpu().numpy())
@@ -110,13 +116,13 @@ def valid_per_epoch(config, valid_loader, model, criterion, text_table, valid_da
       sentences = item['input_ids'].to(config.device)
       attention_mask = item['attention_mask'].to(config.device)
       target = item['labels'].to(config.device)
-
-      if config.use_entity_embedding:
-        entity_embed = item['Entity_type_embedding'].to(config.device)
-        entity_idxes = item['Entity_idxes'].to(config.device)
-        pred = model.forward(sentences, attention_mask=attention_mask, entity_location=entity_idxes, entity_type_ids=entity_embed, labels=target)
-      else:
-        pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
+      with autocast():
+        if config.use_entity_embedding:
+          entity_embed = item['Entity_type_embedding'].to(config.device)
+          entity_idxes = item['Entity_idxes'].to(config.device)
+          pred = model.forward(sentences, attention_mask=attention_mask, entity_location=entity_idxes, entity_type_ids=entity_embed, labels=target)
+        else:
+          pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
       logits = pred[1]
 
       loss = criterion(logits, target)

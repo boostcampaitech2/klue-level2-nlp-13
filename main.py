@@ -46,7 +46,7 @@ if __name__ == "__main__":
     
     # 2. Load data
     print('='*10, "Data loading...", '='*10)
-    train_dataset, valid_dataset = load_data(config.data_path, config)
+    train_dataset, valid_dataset = load_data(config.data_path, config, 'main')
 
         # class imbalanced 보완을 위한 loss 사용시, 가중치 계산 (utills.py)
     if 'weighted' in  config.loss_name:
@@ -62,11 +62,12 @@ if __name__ == "__main__":
     #print('loded:\t', train_dataset.shape)
 
         # 추가된 데이터를 사용 한다면
-    # if config.use_aug_data:
-    #     aug_dataset = load_data(config.data_path, config)
-    #     aug_dataset = aug_dataset.loc[~aug_dataset['id'].isin(valid_dataset['id'])]
-    #     train_dataset = pd.concat([train_dataset, aug_dataset], axis=0)
-    #     print('changed:\t', train_dataset.shape)
+    if config.use_aug_data:
+        aug_dataset = load_data(config.augmentation_data_path, config, 'aug')
+        #aug_dataset = aug_dataset.loc[~aug_dataset['id'].isin(valid_dataset['id'])]
+        print(train_dataset.shape, aug_dataset.shape)
+        train_dataset = pd.concat([train_dataset, aug_dataset], axis=0)
+        print('changed:\t', train_dataset.shape)
         # 라벨-index 맵핑
     train_label = label_to_num(config, train_dataset['label'].values)
     valid_label = label_to_num(config, valid_dataset['label'].values)

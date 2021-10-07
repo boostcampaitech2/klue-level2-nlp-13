@@ -75,16 +75,18 @@ class CrossEntropy_FoscalLoss_LabelSmoothingLoss(nn.Module):
         super().__init__()
         self.weight1 = config.loss1_weight
         self.weight2 = config.loss2_weight
-        self.weight3 = config.loss3_weight
         self.device = config.device
         self.class_weights = class_weights
         self.config = config
 
     def forward(self, inputs, targets):
-        ce_loss = nn.CrossEntropyLoss(weight=torch.tensor(self.class_weights).to(self.device, dtype=torch.float))(inputs, targets)
+        if self.class_weights:
+            ce_loss = nn.CrossEntropyLoss(weight=torch.tensor(self.class_weights).to(self.device, dtype=torch.float))(inputs, targets)
+        else:
+            ce_loss = nn.CrossEntropyLoss()(inputs, targets)
         fs_loss = FocalLoss()(inputs, targets)
         ls_loss = LabelSmoothingLoss(self.config, self.config.num_classes)(inputs, targets)
-        return ce_loss * self.weight1 + fs_loss * self.weight2 + ls_loss * self.weight3
+        return ce_loss * self.weight1 + fs_loss * self.weight2 + ls_loss
 
 # Custom Loss 사용을 위해 Trainner 정의 (loss.py)
 class MyTrainer(Trainer):
@@ -104,8 +106,10 @@ class MyTrainer(Trainer):
             custom_loss = torch.nn.CrossEntropyLoss(weight=torch.tensor(self.config.class_weight).to(self.config.device, dtype=torch.float))
         elif self.config.loss_name == 'Focal':
             custom_loss = FocalLoss()
-        elif self.config.loss_name == 'Crossentropy_focal_labelsmoothing':
+        elif self.config.loss_name == 'Crossentropy_weighted_focal_labelsmoothing':
             custom_loss = CrossEntropy_FoscalLoss_LabelSmoothingLoss(self.config.class_weight, self.config)
+        elif self.config.loss_name == 'Crossentropy_weighted_focal_labelsmoothing':
+            custom_loss = CrossEntropy_FoscalLoss_LabelSmoothingLoss(None, self.config)
         
         if self.label_smoother is not None and "labels" in inputs:
             labels = inputs.pop("labels")
