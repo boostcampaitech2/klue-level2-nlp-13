@@ -10,8 +10,8 @@ Team: CLUE (level2-nlp-13)
 # 1. Requirements
 ```
 torch == 1.9.0+cu102
-transformers == 
-sklearn == 0.24.2
+transformers == 4.10.0
+sklearn == 0.24.1
 numpy == 1.19.2
 pandas == 1.1.5
 ```
