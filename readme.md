@@ -17,6 +17,46 @@ pandas == 1.1.5
 ```
 
 # 2. Project files
+##Architecture
+```
+dataset/
+├── train/
+│ ├── train.csv
+│ ├── valid.csv
+├── test/
+│ ├── test_data.csv
+code/
+├── main.py
+├── train.py
+├── custom_train.py
+├── re_pretraining.py
+├── load_data.py
+├── model.py
+├── mytokenizers.py
+├── optimizer.py
+├── Loss.py
+├── urills.py
+├── inference.py
+├── two_step_inference.py
+├── config.ini
+├── pretrained/
+│   └── roberta-large-pretrained/
+│       └── roberta-large
+├── best_model/
+│     ├── pytorch.bin
+│     ├── pytorch.config
+├── prediction/
+│   └── submission.csv
+├── results/
+│   └── checkpointOOOO/
+│       ├── pytorch.bin
+│       ├── pytorch.config
+├── runs/
+└── logs/
+
+  
+```
+
 * main.py - main process for training
 * train.py - function for train with Trainer, Trainargumets class in transformers library
 * custom_train.py - basic pipe line for pytorch model
