@@ -17,6 +17,36 @@ pandas == 1.3.3
 ```
 
 # 2. Project files
+## Archive contents
+```
+dataset/
+├── train/
+│ ├── train.csv
+│ ├── valid.csv
+├── test/
+│ ├── test_data.csv
+code/
+├── train.py
+├── inference.py
+├── load_data.py
+├── re_pretraining.py
+├── pretrained/
+│   └── roberta-large-pretrained/
+│       └── roberta-large
+├── best_model/
+│     ├── pytorch.bin
+│     ├── pytorch.config
+├── prediction/
+│   └── submission.csv
+├── results/
+│   └── checkpointOOOO/
+│       ├── pytorch.bin
+│       ├── pytorch.config
+├── wandb/
+└── logs/
+  
+```
+
 * train.py - function for train with Trainer, Trainargumets class in transformers library
 * load_data.py - class and function for data load, tokenizing
 * inference.py - inference for single model
@@ -43,7 +73,7 @@ parser.add_argument('--warmup_ratio', type=float, default=0.2, help='number of w
 parser.add_argument('--scheduler', type=str, default="linear", help='scheduler(default: "linear")')
 
 [inference.py]
-parser.add_argument('--model_dir', type=str, default="/opt/ml/code/pretrained/opt/ml/kyunghyun/roberta-large-pretrained/roberta-large")
+parser.add_argument('--model_dir', type=str, default="/opt/ml/code/pretrained/roberta-large-pretrained/roberta-large")
 parser.add_argument('--model', type=str, default="klue/roberta-large")
 
 
