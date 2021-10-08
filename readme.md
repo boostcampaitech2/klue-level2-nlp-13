@@ -2,10 +2,10 @@
 Team: CLUE (level2-nlp-13)
 
 # Contents
-1. [Requirements](#Requirements)
-2. [Project files](#Project-files)
-3. [Train](#Train)
-4. [Inference](#Inference)
+1. [Requirements](#1-requirements)
+2. [Project files](#2-project-files)
+3. [Train](#3-Train)
+4. [Inference](#4-Inference)
 
 # 1. Requirements
 ```
