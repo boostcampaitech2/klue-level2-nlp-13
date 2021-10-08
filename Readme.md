@@ -129,6 +129,6 @@ infernece.py -model_dir "/opt/ml/code/pretrained/opt/ml/kyunghyun/roberta-large-
 
 # 5. Result
 * final ranking: 13/19 
-* score public micro f1 72.940 / auprc 76.668 => private micro f1 71.910 / auprc 79.132
+* private score: micro f1 71.910 , auprc 79.132
 * Wandb  
 ![캡처]()
