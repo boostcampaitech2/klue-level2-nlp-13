@@ -2,7 +2,7 @@
 Team: CLUE (level2-nlp-13)
 
 # Contents
-1. [Requirements](#1. Requirements)
+1. [Requirements](#Requirements)
 2. [Project files](#Project-files)
 3. [Train](#Train)
 4. [Inference](#Inference)
@@ -24,7 +24,7 @@ pandas == 1.3.3
 
 # 3. Train
 1. parameter setting
-```args.parser
+``` 
 
 [train.py]
 parser.add_argument('--model_type', default="roberta",type=str, help='model type(default=bert)')
