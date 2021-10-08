@@ -54,8 +54,7 @@ code/
 
 # 3. Train
 1. parameter setting
-``` 
-
+```python
 [train.py]
 parser.add_argument('--model_type', default="roberta",type=str, help='model type(default=bert)')
 parser.add_argument('--model_name', default="klue/roberta-large",type=str, help='model name(default="klue/bert-base")')
@@ -75,8 +74,8 @@ parser.add_argument('--scheduler', type=str, default="linear", help='scheduler(d
 [inference.py]
 parser.add_argument('--model_dir', type=str, default="/opt/ml/code/pretrained/roberta-large-pretrained/roberta-large")
 parser.add_argument('--model', type=str, default="klue/roberta-large")
-
-
+```
+```ini
 - Default paramters -
 [Path]
 data_path = opt/ml/dataset/train/train.csv
