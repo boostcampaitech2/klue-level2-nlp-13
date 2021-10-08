@@ -109,6 +109,35 @@ def do_inference(config):
   #### 필수!! ##############################################
   print('---- Finish! ----')
 
+###### 추가 ######
+def get_csv(csv_dir):
+  output = pd.read_csv(csv_dir)
+  output['probs'] = output['probs'].apply(lambda x: eval(x))
+  return output
+
+def ensemble(submission, csv_dir_list):
+  zip_list = []
+  for csv_dir in csv_dir_list:
+    output = get_csv(csv_dir)
+    zip_list.append(output)
+  
+  for i in range(len(submission)):
+    temp_zip = []
+    for zip_file in zip_list:
+      temp_zip.append(zip_file['probs'].iloc[i])
+
+    probs = zip(*temp_zip)
+    temp_probs = []
+    for prob in probs:
+      temp_probs.append(sum(prob)/len(csv_dir_list))
+    submission['probs'].iloc[i] = temp_probs
+    submission['pred_label'].iloc[i] = temp_probs.index(max(temp_probs))
+    submission['pred_label'] = num_to_label(submission['pred_label'])
+    return submission
+###### 추가 ######
+
+
+
 if __name__ == '__main__':
   argv = sys.argv
   file_name = argv[0] # 실행시키는 파일명
