@@ -1,13 +1,13 @@
 # KLUE - Relation Extraction
 Team: CLUE (level2-nlp-13)
 Members : 
-    - Lim kyunghyun (Team leader)
-    - Kim gangmin
-    - Lim hyoseok
-    - Yang junhyuk
-    - Lee jonghyuk
-    - Kim sanguk
-    - Kim donghyun
+    * Lim kyunghyun (Team leader)
+    * Kim gangmin
+    * Lim hyoseok
+    * Yang junhyuk
+    * Lee jonghyuk
+    * Kim sanguk
+    * Kim donghyun
 
 # Contents
 1. [Requirements](#1-requirements)
