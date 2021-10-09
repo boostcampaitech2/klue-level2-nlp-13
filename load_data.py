@@ -73,6 +73,30 @@ def load_data(dataset_dir, config, type):
     return dataset, valid
   return dataset
 
+def tokenizing(dataset, mode):
+  """ sentence의 형태에 따라 다른 조건 부여해 tokenizing 합니다."""
+  if mode == 'single_sentence':
+    tokenized_sentences = tokenizer(
+        list(dataset['sentence']),
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=256,
+        add_special_tokens=True,
+        )
+  elif mode == 'multi_sentence':
+    tokenized_sentences = tokenizer(
+        concat_entity,
+        list(dataset['sentence']),
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=256,
+        add_special_tokens=True,
+        return_token_type_ids=False, # 문장 id
+        )
+   return tokenized_sentences
+    
 def tokenized_dataset(config, dataset, tokenizer):
   """ tokenizer에 따라 sentence를 tokenizing 합니다."""
   
@@ -84,59 +108,30 @@ def tokenized_dataset(config, dataset, tokenizer):
         temp_sentence = (temp_sentence[:e01_idx[0]] + f'@ * {type_to_ko[e01_type]} * ' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + ' @ ' 
         + temp_sentence[e01_idx[1]+1:e02_idx[0]] + f'+ ^ {type_to_ko[e02_type]} ^ ' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + ' + ' + temp_sentence[e02_idx[1]+1:])
         dataset['sentence'].iloc[idx] = temp_sentence
-    tokenized_sentences = tokenizer(
-        list(dataset['sentence']),
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=256,
-        add_special_tokens=True,
-        #return_token_type_ids=False, # 문장 id
-        )
+     tokenized_sentences = tokenizing(dataset, 'single_sentence')
+     
   elif config.add_special_token == 'punct':
     for idx, (e01_idx, e01_type, e02_idx, e02_type) in enumerate(zip(dataset['subject_entity_idx'], dataset['subject_entity_types'], dataset['object_entity_idx'], dataset['object_entity_types'])):
         temp_sentence = dataset['sentence'].iloc[idx]
         temp_sentence = (temp_sentence[:e01_idx[0]] + f' @* ' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + ' @ ' 
         + temp_sentence[e01_idx[1]+1:e02_idx[0]] + f' +^ ' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + ' + ' + temp_sentence[e02_idx[1]+1:])
         dataset['sentence'].iloc[idx] = temp_sentence
-    tokenized_sentences = tokenizer(
-        list(dataset['sentence']),
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=256,
-        add_special_tokens=True,
-        #return_token_type_ids=False, # 문장 id
-        )
+    tokenized_sentences = tokenizing(dataset, 'single_sentence')
+    
   elif config.add_special_token == 'special':
     for idx, (e01_idx, e01_type, e02_idx, e02_type) in enumerate(zip(dataset['subject_entity_idx'], dataset['subject_entity_types'], dataset['object_entity_idx'], dataset['object_entity_types'])):
       temp_sentence = dataset['sentence'].iloc[idx]
       temp_sentence = (temp_sentence[:e01_idx[0]] + ' [E1] ' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + ' [/E1] ' 
       + temp_sentence[e01_idx[1]+1:e02_idx[0]] + ' [E2] ' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + ' [/E2] ' + temp_sentence[e02_idx[1]+1:])
       dataset['sentence'].iloc[idx] = temp_sentence
-    tokenized_sentences = tokenizer(
-        list(dataset['sentence']),
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=256,
-        add_special_tokens=True,
-        #return_token_type_ids=False, # 문장 id
-        )
+    tokenized_sentences = tokenizing(dataset, 'single_sentence')
+    
   else:
     for e01, e02 in zip(dataset['subject_entity'], dataset['object_entity']):
       temp = ''
       temp = e01 + '[SEP]' + e02
       concat_entity.append(temp)
-    tokenized_sentences = tokenizer(
-        concat_entity,
-        list(dataset['sentence']),
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=256,
-        add_special_tokens=True,
-        return_token_type_ids=False, # 문장 id
-        )
+    tokenized_sentences = tokenizing(dataset, 'multi_sentence')
+    
   return tokenized_sentences
 
