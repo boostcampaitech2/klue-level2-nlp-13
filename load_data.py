@@ -1,8 +1,6 @@
 import pandas as pd
-import numpy as np
 import torch
 from ast import literal_eval
-
 from utills import *
 
 class RE_Dataset(torch.utils.data.Dataset):

@@ -1,3 +1,7 @@
+##################
+# import modules #
+##################
+
 import sys, getopt
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from torch.utils.data import DataLoader
@@ -10,6 +14,10 @@ import torch.nn.functional as F
 import pickle as pickle
 import numpy as np
 from tqdm import tqdm
+
+#######################
+# functions & classes #
+#######################
 
 def inference(model, tokenized_sent, device):
   """
@@ -86,7 +94,7 @@ def change_probs(df, mode):
 
 def do_inference(config):
   """
-    주어진 dataset csv 파일과 같은 형태일 경우 inference 가능한 코드입니다.
+    two_step model을 inference 합니다.
   """
   device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
   # 1. load tokenizer

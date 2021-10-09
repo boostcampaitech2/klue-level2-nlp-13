@@ -1,7 +1,18 @@
+##################
+# import modules #
+##################
+
 import torch
 from transformers import AdamW
 
+#######################
+# functions & classes #
+#######################
+
 def get_optimizer(model, config):
+    """
+        옵션에 맞는 optimizer를 return 합니다.
+    """
     if config.optimizer_name == 'AdamW':
         optimizer = AdamW(model.parameters(), lr = config.learning_rate)
     elif config.optimizer_name == 'Adam':
@@ -10,6 +21,9 @@ def get_optimizer(model, config):
     return optimizer
 
 def get_scheduler(optimizer, config):
+    """
+        옵션에 맞는 scheduler를 return 합니다.
+    """
     if config.scheduler_name == 'CosineAnnealingLR':
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,

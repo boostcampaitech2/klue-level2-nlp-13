@@ -1,5 +1,13 @@
 # KLUE - Relation Extraction
 Team: CLUE (level2-nlp-13)
+Members : 
+    - Lim kyunghyun (Team leader)
+    - Kim gangmin
+    - Lim hyoseok
+    - Yang junhyuk
+    - Lee jonghyuk
+    - Kim sanguk
+    - Kim donghyun
 
 # Contents
 1. [Requirements](#1-requirements)
@@ -17,7 +25,7 @@ pandas == 1.1.5
 ```
 
 # 2. Project files
-##Architecture
+## Architecture
 ```
 dataset/
 ├── train/
@@ -72,7 +80,7 @@ code/
 * config.ini - Setting the necessary parameters for the overall learning process
 
 # 3. Train
-1. config.ini setting
+1. config.ini defalut setting
 ```ini
 [Path]
 data_path = ./train.csv

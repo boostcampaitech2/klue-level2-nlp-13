@@ -1,5 +1,7 @@
-from enum import auto
-from load_data import tokenized_dataset
+##################
+# import modules #
+##################
+
 from optimizer import get_optimizer, get_scheduler
 from utills import * 
 from models import StratifiedSampler
@@ -12,32 +14,54 @@ import numpy as np
 import torch
 import wandb
 import os
-import torch.nn.functional as F
+
+#################
+# Set Variabels #
+#################
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-def custom_train(config, model, train_dataset, valid_dataset, tokenizer): 
+#############
+# Functions #
+#############
+
+def custom_train(config, model, train_dataset, valid_dataset, tokenizer):
+  """
+     Training for pytorch scratch style.
+
+     Parameter:
+      config : config, object has all of variables
+      model : huggingface model, model from hugging face inherits torch.nn.Module
+      train_dataset : torch.utils.data.Dataset, train dataset class
+      valid_dataset : torch.utils.data.Dataset, validation dataset class
+      tokenizer : tokenizer, tokenizing natural language class
+  """
+    # set optimizer, scheduler, loss
   optimizer = get_optimizer(model, config)
   scheduler = get_scheduler(optimizer, config)
   criterion = get_loss(config)
 
+    # logging for wandb
   wandb.watch(model)
 
+    # DataLoader
   y = torch.from_numpy(np.array(train_dataset.labels))
   batch_sampler = StratifiedSampler(class_vector=y ,batch_size=config.batch_size)
 
   train_loader = DataLoader(train_dataset, batch_size=config.batch_size, sampler=batch_sampler, num_workers=5)
   valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, num_workers=5)
-  
+
+    # Make model save directory (overwrite = True)
   os.makedirs(config.model_save_path, exist_ok=True)
   
-  best_criterion = 0 # f1-score로
+  best_criterion = 0 # measured from f1-score
   early_count = 0
 
   for epoch in range(config.num_train_epochs):
-    # your training routine
+    # training routine
     train_loss, train_f1_score, train_auprc = train_per_epoch(config, train_loader, model, optimizer, criterion)
 
-    # vlidation routine
+    # validation routine
     text_table = wandb.Table(columns=['pred_label', 'real_label', 'text'])
     valid_loss, valid_f1_score, valid_auprc = valid_per_epoch(config, valid_loader, model, criterion, text_table, valid_dataset, tokenizer)
 
@@ -63,14 +87,25 @@ def custom_train(config, model, train_dataset, valid_dataset, tokenizer):
     wandb.log({'Miss classification samples': text_table})
  
 def train_per_epoch(config, train_loader, model, optimizer, criterion):
+  """
+    Train model for 1 epoch size
+  """  
+   # set model mode
   model.train()
+
+   # set GPU tensor scaler
   scaler = GradScaler()
 
+   # init result variables
   pred_labels = []
   pred_probs = []
   target_labels = []
   train_loss = 0
+
+   # init optimizer
   optimizer.zero_grad()
+
+   # Start train with batch size
   for batch_idx, item in enumerate(tqdm(train_loader)):
     sentences = item['input_ids'].to(config.device)
     attention_mask = item['attention_mask'].to(config.device)
@@ -85,18 +120,22 @@ def train_per_epoch(config, train_loader, model, optimizer, criterion):
         pred = model.forward(sentences, attention_mask=attention_mask, labels=target)
     logits = pred[1]
 
+    # get loss
     loss = criterion(logits, target)
+    # Backpropagation
     scaler.scale(loss).backward()
     if batch_idx % 1 == 0:
-      scaler.step(optimizer)#.step()
+      scaler.step(optimizer)
       scaler.update()
       optimizer.zero_grad()
 
+    # Append result
     train_loss += loss.detach().cpu().numpy()
     pred_labels.extend(torch.argmax(logits.cpu(), dim=1).detach().cpu().numpy())
     pred_probs.extend(logits.detach().cpu().numpy())
     target_labels.extend(target.detach().cpu().numpy())
 
+   # Calculate metrics
   train_loss /= batch_idx
   train_f1_score = klue_re_micro_f1(pred_labels, target_labels)
   train_auprc = klue_re_auprc(np.array(pred_probs), target_labels)
@@ -104,14 +143,20 @@ def train_per_epoch(config, train_loader, model, optimizer, criterion):
   return train_loss, train_f1_score, train_auprc
 
 def valid_per_epoch(config, valid_loader, model, criterion, text_table, valid_dataset, tokenizer):
+  """
+    Validation model
+  """ 
   with torch.no_grad():
+     #set model mode
     model.eval()
 
+     # init result variables
     pred_labels = []
     pred_probs = []
     target_labels = []
     valid_loss = 0
 
+    # Start validation with batch size
     for batch_idx, item in enumerate(tqdm(valid_loader)):
       sentences = item['input_ids'].to(config.device)
       attention_mask = item['attention_mask'].to(config.device)
@@ -127,11 +172,13 @@ def valid_per_epoch(config, valid_loader, model, criterion, text_table, valid_da
 
       loss = criterion(logits, target)
 
+      # Append result
       valid_loss += loss.detach().cpu().numpy()
       pred_labels.extend(torch.argmax(logits.cpu(), dim=1).detach().cpu().numpy())
       pred_probs.extend(logits.detach().cpu().numpy())
       target_labels.extend(target.detach().cpu().numpy())
 
+     # Calculate metrics
     valid_loss /= batch_idx
     valid_f1_score = klue_re_micro_f1(pred_labels, target_labels)
     valid_auprc = klue_re_auprc(np.array(pred_probs), target_labels)

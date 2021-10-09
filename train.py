@@ -1,9 +1,17 @@
+##################
+# import modules #
+##################
+
 from optimizer import get_optimizer
-from transformers import Trainer, TrainingArguments
+from transformers import TrainingArguments
 from transformers.utils.dummy_pt_objects import get_scheduler
 from utills import * 
 from loss import MyTrainer
-import torch
+
+
+#############
+# functions #
+#############
 
 def train(config, model, train_dataset, valid_dataset): 
   optimizer = get_optimizer(model, config)
@@ -41,10 +49,11 @@ def train(config, model, train_dataset, valid_dataset):
     args=training_args,                  # training arguments, defined above
     train_dataset=train_dataset,         # training dataset
     eval_dataset=valid_dataset,          # evaluation dataset
-    optimizers=optimizers,
+    optimizers=optimizers,               # set optimizer
     compute_metrics=compute_metrics      # define metrics function
   )
 
   # train model
   trainer.train()
-  #model.save_pretrained(config.model_save_path)
+  # model save
+  model.save_pretrained(config.model_save_path)

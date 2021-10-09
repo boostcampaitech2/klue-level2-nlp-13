@@ -1,9 +1,16 @@
+##################
+# import modules #
+##################
+
 from transformers import AutoConfig, AutoModelForSequenceClassification, RobertaModel
 from transformers.models.roberta.modeling_roberta import RobertaPreTrainedModel
 import torch
 import torch.nn as nn
 from torch.utils.data import Sampler
-from torchsummary import summary
+
+#######################
+# functions & classes #
+#######################
 
 class MyRobertaClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
@@ -16,8 +23,6 @@ class MyRobertaClassificationHead(nn.Module):
         self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
     def forward(self, features, entity_location):
-        #entity_location [subj_s, subj_e, obj_s, obj_e]
-        #print(entity_location)
         subject_entity_avgs = []
         oject_entity_avgs = []
         for idx in range(entity_location.shape[0]):
@@ -29,17 +34,14 @@ class MyRobertaClassificationHead(nn.Module):
             oject_entity_avg = torch.mean(oject_entity_avg, axis=1)
             oject_entity_avgs.append(oject_entity_avg.cpu().detach().numpy())
         
-       # print(subject_entity_avgs)
 
         subject_entity_avgs = torch.tensor(subject_entity_avgs)
         oject_entity_avgs = torch.tensor(oject_entity_avgs)
-        #print(subject_entity_avg.shape, oject_entity_avg.shape, features[:, 0, :].shape)
         
         x = torch.cat([features[:, 0, :], subject_entity_avg, oject_entity_avg], axis = 1)
         x = self.dropout(x)
         x = self.dense1(x)
         x = torch.tanh(x)
-        #x = self.dropout(x)
         x = self.dense2(x)
         x = torch.tanh(x)
         x = self.out_proj(x)
@@ -97,8 +99,9 @@ class MyRobertaForSequenceClassification(RobertaPreTrainedModel):
         return ((loss,) + output) if loss is not None else output
 
 class StratifiedSampler(Sampler):
-    """Stratified Sampling
-    Provides equal representation of target classes in each batch
+    """
+        Stratified Sampling
+        Provides equal representation of target classes in each batch
     """
     def __init__(self, class_vector, batch_size):
         """

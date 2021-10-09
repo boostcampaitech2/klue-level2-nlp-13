@@ -1,3 +1,7 @@
+##################
+# import modules #
+##################
+
 import configparser
 import wandb
 import pandas as pd
@@ -6,13 +10,18 @@ import json
 import pickle as pickle
 import ast
 from collections import defaultdict
-
 import torch
 import sklearn
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
+from sklearn.metrics import accuracy_score
 
+#######################
+# functions & classes #
+#######################
 
 def read_config(paths):
+    """
+      Configure.ini 파일로 부터 변수 받아옵니다.
+    """
     config = wandb.config
 
     values = configparser.ConfigParser()
@@ -55,6 +64,7 @@ def read_config(paths):
     config.k_fold_num = int(values['Training']['k_fold_num'])
     config.random_state = int(values['Training']['random_state'])
     config.use_aug_data = values['Training'].getboolean('use_aug_data', 'b')
+    config.trainer = values['Training'].getboolean('trainer', 'b')
 
     # For Recording
     config.logging_steps = int(values['Recording']['logging_steps'])
@@ -149,8 +159,11 @@ def compute_metrics(pred):
       'accuracy': acc,
   }
 
-# 각 클래스의 데이터 수 기반 class_weights 계산
+ 
 def get_class_weights(train_label):
+  """
+    각 클래스의 데이터 수 기반 class_weights 계산
+  """
   _ , class_num = np.unique(train_label, return_counts = True)
   print("Class number: ", _)
   print("Class Balance: ", class_num)
@@ -159,8 +172,10 @@ def get_class_weights(train_label):
   class_weight = (base_class / np.array(class_num))
   return class_weight
 
-# wandb에 학습 결과 기록
 def logging_with_wandb(epoch, train_loss, train_f1_score, train_auprc, valid_loss, valid_f1_score, valid_auprc):
+  """
+    wandb에 학습 결과 기록
+  """
   wandb.log({
     f"epoch": epoch,
     f"train_loss": train_loss,
@@ -171,8 +186,10 @@ def logging_with_wandb(epoch, train_loss, train_f1_score, train_auprc, valid_los
     f"valid_auprc": valid_auprc,
     })
 
-# console에 결과 출력
 def logging_with_console(epoch, train_loss, train_f1_score, train_auprc, valid_loss, valid_f1_score, valid_auprc):
+  """
+    console에 결과 출력
+  """
   print(f"epoch: {epoch} | "
         f"train_loss:{train_loss:.5f} | "
         f"train_f1:{train_f1_score:.2f} | "
@@ -182,8 +199,11 @@ def logging_with_console(epoch, train_loss, train_f1_score, train_auprc, valid_l
         f"valid_auprc:{valid_auprc:.2f}"
   )
 
-# entity 표현 방식에 따른 entity 위치 계산
+
 def get_entity_idxes(tokenizer, token_list, config):
+  """
+    entity 표현 방식에 따른 entity 위치 계산
+  """
   entity_embedding = np.zeros(len(token_list))
   if config.add_special_token == 'special':
     # 스페셜 토큰 위치로 쉽게 찾을 수 있음
@@ -254,8 +274,10 @@ def get_entity_idxes(tokenizer, token_list, config):
 
     return entity_embedding, sjb_start_idx, sjb_end_idx, obj_start_idx, obj_end_idx
 
-# entity 표현 방식에 따른 entity 위치 계산한 것 반환 받아 dataset에 넣어주기
 def insert_entity_idx_tokenized_dataset(tokenizer, dataset, config):
+  """
+    entity 표현 방식에 따른 entity 위치를 계산한 것 반환 받아 dataset에 넣어줍니다.
+  """
   if config.add_special_token == 'special':
       entity_embeddings = [get_entity_idxes(tokenizer, ids, config) for ids in dataset['input_ids'].numpy()]
       dataset['Entity_type_embedding'] = torch.tensor(entity_embeddings).to(torch.int64)
@@ -269,8 +291,10 @@ def insert_entity_idx_tokenized_dataset(tokenizer, dataset, config):
       dataset['Entity_type_embedding'] = torch.tensor(entity_embeddings).to(torch.int64)
       dataset['Entity_idxes'] = torch.tensor(entity_idxes).to(torch.int64)
 
-# joson 데이터 불러오기
 def json_to_df():
+    """
+      json 데이터 불러오기      
+    """
     json_path = "/opt/ml/dataset/train/klue-re-v1.1_dev.json"
     with open(json_path) as f:
         json_object = json.load(f)

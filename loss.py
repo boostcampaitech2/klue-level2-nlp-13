@@ -1,7 +1,15 @@
+########
+# main #
+########
+
 import torch
 import torch.nn as nn
 import torch.functional as F    
 from transformers import Trainer
+
+#######################
+# functions & classes #
+#######################
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=1, gamma=2, logits=False, reduce=True):
@@ -126,17 +134,16 @@ class MyTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
 
 def get_loss(config):
-    if config.loss_name == 'CrossEntropy':
-        custom_loss = torch.nn.CrossEntropyLoss()
-    elif config.loss_name == 'Crossentropy_weighted_foscal':
-        custom_loss = CrossEntropy_FoscalLoss(config.class_weight, config)
-    elif config.loss_name == 'Crossentropy_foscal':
-        custom_loss = CrossEntropy_FoscalLoss(None, config)
-    elif config.loss_name == 'CrossEntropy_weighted':
-        custom_loss = torch.nn.CrossEntropyLoss(weight=torch.tensor(config.class_weight).to(config.device, dtype=torch.float))
-    elif config.loss_name == 'Focal':
-        custom_loss = FocalLoss()
-    elif config.loss_name == 'Crossentropy_focal_labelsmoothing':
-        custom_loss = CrossEntropy_FoscalLoss_LabelSmoothingLoss(config.class_weight, config)
+    """
+        옵션에 맞는 Loss를 return 합니다.
+    """
+    LOSSES = {
+        'CrossEntropy'                      : torch.nn.CrossEntropyLoss(),
+        'Crossentropy_weighted_foscal'      : CrossEntropy_FoscalLoss(config.class_weight, config),
+        'Crossentropy_foscal'               : CrossEntropy_FoscalLoss(None, config),
+        'CrossEntropy_weighted'             : torch.nn.CrossEntropyLoss(weight=torch.tensor(config.class_weight).to(config.device, dtype=torch.float)),
+        'Focal'                             : FocalLoss(),
+        'Crossentropy_focal_labelsmoothing' : CrossEntropy_FoscalLoss_LabelSmoothingLoss(config.class_weight, config),
+    }
     
-    return custom_loss
+    return LOSSES[config.loss_name]

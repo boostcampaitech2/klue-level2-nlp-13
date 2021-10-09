@@ -1,3 +1,7 @@
+##################
+# import modules #
+##################
+
 import sys, getopt
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from torch.utils.data import DataLoader
@@ -6,10 +10,14 @@ from utills import *
 import pandas as pd
 import torch
 import torch.nn.functional as F
-
 import pickle as pickle
 import numpy as np
 from tqdm import tqdm
+
+
+#######################
+# functions & classes #
+#######################
 
 def inference(model, tokenized_sent, device):
   """
@@ -68,7 +76,7 @@ def load_test_dataset(config, dataset_dir, tokenizer):
 
 def do_inference(config):
   """
-    주어진 dataset csv 파일과 같은 형태일 경우 inference 가능한 코드입니다.
+    configure 파일의 변수 세팅대로 inference를 진행 합니다.
   """
   device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
   # load tokenizer
@@ -99,23 +107,26 @@ def do_inference(config):
   pred_answer = num_to_label(pred_answer) # 숫자로 된 class를 원래 문자열 라벨로 변환.
   
   ## make csv file with predicted answer
-  #########################################################
-  # 아래 directory와 columns의 형태는 지켜주시기 바랍니다.
   output = pd.DataFrame({'id':test_id,'pred_label':pred_answer,'probs':output_prob,})
 
   print()
   submission_file_name = config.submission_file_name
   output.to_csv('./prediction/' + submission_file_name, index=False) # 최종적으로 완성된 예측한 라벨 csv 파일 형태로 저장.
-  #### 필수!! ##############################################
   print('---- Finish! ----')
 
-###### 추가 ######
+
 def get_csv(csv_dir):
+  """
+    CSV파일을 경로로 부터 읽어와 확률값을 return 합니다.
+  """
   output = pd.read_csv(csv_dir)
   output['probs'] = output['probs'].apply(lambda x: eval(x))
   return output
 
 def ensemble(submission, csv_dir_list):
+  """
+    완성된 submission csv를 불러와 결과를 soft voting으로 ensemble 합니다.
+  """
   zip_list = []
   for csv_dir in csv_dir_list:
     output = get_csv(csv_dir)
@@ -134,9 +145,10 @@ def ensemble(submission, csv_dir_list):
     submission['pred_label'].iloc[i] = temp_probs.index(max(temp_probs))
     submission['pred_label'] = num_to_label(submission['pred_label'])
     return submission
-###### 추가 ######
 
-
+########
+# main #
+########
 
 if __name__ == '__main__':
   argv = sys.argv
@@ -165,6 +177,6 @@ if __name__ == '__main__':
       print(file_name, "-c <config_path> is madatory")
       sys.exit(2)
 
-config = read_config(config_path)
-do_inference(config)
+  config = read_config(config_path)
+  do_inference(config)
 
