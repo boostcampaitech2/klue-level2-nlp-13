@@ -98,7 +98,7 @@ def tokenizing(dataset, mode):
    return tokenized_sentences
     
 def tokenized_dataset(config, dataset, tokenizer):
-  """ tokenizer에 따라 sentence를 tokenizing 합니다."""
+  """ Entity 표현 방식에 따라 문장을 전처리하고 sentence를 tokenizing 합니다."""
   
   concat_entity = []
   if config.add_special_token == 'punct_type':
