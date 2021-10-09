@@ -168,6 +168,6 @@ two_step_infernece.py -c <config file path>
     * Scores :
         * F1-score micro : 71.910
         * AUPRC : 79.132
-    * Rank : 13   
+    * Rank : 13 / 19   
 * Wandb  
 ![캡처](https://user-images.githubusercontent.com/72729802/136358624-51bd79f0-afd8-4e93-a5b6-e74a31a0afb2.PNG)
