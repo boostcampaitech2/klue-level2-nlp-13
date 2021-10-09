@@ -295,7 +295,7 @@ def json_to_df():
     """
       json 데이터 불러오기      
     """
-    json_path = "/opt/ml/dataset/train/klue-re-v1.1_dev.json"
+    json_path = "/opt/ml/dataset/train/test_data.json"
     with open(json_path) as f:
         json_object = json.load(f)
     data = defaultdict(list)
