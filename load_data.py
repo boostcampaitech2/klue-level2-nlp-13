@@ -73,7 +73,7 @@ def load_data(dataset_dir, config, type):
     return dataset, valid
   return dataset
 
-def tokenizing(dataset, mode):
+def tokenizing(dataset, mode, tokenizer, concat_entity):
   """ sentence의 형태에 따라 다른 조건 부여해 tokenizing 합니다."""
   if mode == 'single_sentence':
     tokenized_sentences = tokenizer(
@@ -95,7 +95,7 @@ def tokenizing(dataset, mode):
         add_special_tokens=True,
         return_token_type_ids=False, # 문장 id
         )
-   return tokenized_sentences
+  return tokenized_sentences
     
 def tokenized_dataset(config, dataset, tokenizer):
   """ Entity 표현 방식에 따라 문장을 전처리하고 sentence를 tokenizing 합니다."""
@@ -108,7 +108,7 @@ def tokenized_dataset(config, dataset, tokenizer):
         temp_sentence = (temp_sentence[:e01_idx[0]] + f'@ * {type_to_ko[e01_type]} * ' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + ' @ ' 
         + temp_sentence[e01_idx[1]+1:e02_idx[0]] + f'+ ^ {type_to_ko[e02_type]} ^ ' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + ' + ' + temp_sentence[e02_idx[1]+1:])
         dataset['sentence'].iloc[idx] = temp_sentence
-     tokenized_sentences = tokenizing(dataset, 'single_sentence')
+    tokenized_sentences = tokenizing(dataset, 'single_sentence', tokenizer, concat_entity)
      
   elif config.add_special_token == 'punct':
     for idx, (e01_idx, e01_type, e02_idx, e02_type) in enumerate(zip(dataset['subject_entity_idx'], dataset['subject_entity_types'], dataset['object_entity_idx'], dataset['object_entity_types'])):
@@ -116,7 +116,7 @@ def tokenized_dataset(config, dataset, tokenizer):
         temp_sentence = (temp_sentence[:e01_idx[0]] + f' @* ' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + ' @ ' 
         + temp_sentence[e01_idx[1]+1:e02_idx[0]] + f' +^ ' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + ' + ' + temp_sentence[e02_idx[1]+1:])
         dataset['sentence'].iloc[idx] = temp_sentence
-    tokenized_sentences = tokenizing(dataset, 'single_sentence')
+    tokenized_sentences = tokenizing(dataset, 'single_sentence', tokenizer, concat_entity)
     
   elif config.add_special_token == 'special':
     for idx, (e01_idx, e01_type, e02_idx, e02_type) in enumerate(zip(dataset['subject_entity_idx'], dataset['subject_entity_types'], dataset['object_entity_idx'], dataset['object_entity_types'])):
@@ -124,7 +124,7 @@ def tokenized_dataset(config, dataset, tokenizer):
       temp_sentence = (temp_sentence[:e01_idx[0]] + ' [E1] ' + temp_sentence[e01_idx[0]:e01_idx[1]+1] + ' [/E1] ' 
       + temp_sentence[e01_idx[1]+1:e02_idx[0]] + ' [E2] ' + temp_sentence[e02_idx[0]:e02_idx[1]+1] + ' [/E2] ' + temp_sentence[e02_idx[1]+1:])
       dataset['sentence'].iloc[idx] = temp_sentence
-    tokenized_sentences = tokenizing(dataset, 'single_sentence')
+    tokenized_sentences = tokenizing(dataset, 'single_sentence', tokenizer, concat_entity)
     
   else:
     for e01, e02 in zip(dataset['subject_entity'], dataset['object_entity']):
